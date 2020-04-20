@@ -1,0 +1,35 @@
+package np.com.bottle.podapp.util;
+
+import android.content.Context;
+import android.net.wifi.WifiManager;
+import android.util.Log;
+
+import static android.content.Context.WIFI_SERVICE;
+
+public class Helper {
+    private static String TAG = Helper.class.getSimpleName();
+
+    /**
+     * This method returns current IP address of the device in xxx.xxx.xxx.xxx format.
+     * @param context -> application context
+     * @return -> IP in string format
+     */
+    public static String getIpAddress(Context context) {
+        WifiManager wifiManager;
+        String strIpAddress = "";
+        int ipAddress = 0;
+
+        wifiManager = (WifiManager) context.getApplicationContext().getSystemService(WIFI_SERVICE);
+
+        try {
+            assert wifiManager != null;
+            ipAddress = wifiManager.getConnectionInfo().getIpAddress();
+        } catch (Exception e) {
+            Log.e(TAG, "Error: " + e.getMessage());
+        }
+
+        strIpAddress = (ipAddress & 0xff) + "." + (ipAddress >> 8 & 0xff) + "." + (ipAddress >> 16 & 0xff) + "." + (ipAddress >> 24 & 0xff);
+        Log.d(TAG, "ipAddress: " + strIpAddress);
+        return strIpAddress;
+    }
+}
