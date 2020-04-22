@@ -38,7 +38,7 @@ public class WebSocketHelper extends WebSocketServer {
     public void onMessage(WebSocket conn, String message) {
         broadcast( message + "111111111111" );
         Log.d(TAG, "conn: " + message);
-        pActivity.onAwsConfigReceived();
+        pActivity.onAwsConfigReceived(message);
     }
 
     @Override

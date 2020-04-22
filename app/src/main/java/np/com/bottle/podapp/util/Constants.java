@@ -6,6 +6,8 @@ public class Constants {
     public static final String KEYSTORE_PASSWORD = "?_Mb5XLc)K+Zk@Fxb6}T}KmdkT5m&`_<";
     public static final String CERTIFICATE_ID = "default";
 
+    public static final int PORT = 8000;
+
     // region AWS Credentials & Key
     // Only for development purpose.
     static final String strCert = "-----BEGIN CERTIFICATE-----\n" +

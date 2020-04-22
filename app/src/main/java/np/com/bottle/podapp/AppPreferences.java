@@ -9,6 +9,14 @@ public class AppPreferences {
 
     public static String CUSTOMER_SPECIFIC_ENDPOINT_ARN = "endpoint_arn";
     public static String CLIENT_ID = "client_id";
+
+    public static String DEVICE_NAME = "device_name";
+    public static String DEVICE_ID = "device_id";
+    public static String ACTIVATION_TOKEN = "activation_token";
+    public static String DEVICE_URI = "device_uri";
+    public static String FLEET_ID = "fleet_id";
+    public static String MQTT_HOST = "mqtt_host";
+
     public static String AWS_IOT_CERTIFICATE = "iot_certificate";
     public static String AWS_IOT_PRIVATE_KEY = "iot_private_key";
     public static String AWS_IOT_PUBLIC_KEY = "iot_public_key";
