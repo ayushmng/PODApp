@@ -1,3 +1,7 @@
 <resources>
     <string name="app_name">POD App</string>
+    <string name="ip_address">IP Address</string>
+    <string name="default_ip">192.168.1.1</string>
+    <string name="port">Port</string>
+    <string name="sample_text">Sample Text</string>
 </resources>

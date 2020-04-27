@@ -7,11 +7,13 @@ import android.os.Bundle;
 import android.widget.Button;
 import android.widget.ImageView;
 
+import np.com.bottle.podapp.AppPreferences;
 import np.com.bottle.podapp.R;
 
 public class SplashScreenActivity extends AppCompatActivity {
 
     private static String TAG = SplashScreenActivity.class.getSimpleName();
+    private AppPreferences appPref;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -20,11 +22,18 @@ public class SplashScreenActivity extends AppCompatActivity {
 
         ImageView ivLogo = findViewById(R.id.ivLogo);
 
+        appPref = new AppPreferences(getApplicationContext());
+
         ivLogo.postDelayed(new Runnable() {
             @Override
             public void run() {
-                startActivity(new Intent(getApplicationContext(), MainActivity.class));
-                finish();
+                if(appPref.getBoolean(AppPreferences.IS_PROVISIONED)) {
+                    startActivity(new Intent(getApplicationContext(), MainActivity.class));
+                    finish();
+                } else {
+                    startActivity(new Intent(getApplicationContext(), ProvisioningActivity.class));
+                    finish();
+                }
             }
         }, 2000);
     }
