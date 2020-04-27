@@ -9,6 +9,13 @@ import static android.content.Context.WIFI_SERVICE;
 public class Helper {
     private static String TAG = Helper.class.getSimpleName();
 
+
+    public static final int RESULT_REQUEST_NFC = 2;  // To ask nfc permission in android
+    public static final int RESULT_REQUEST_EXTERNAL_STORAGE = 3;  // To ask external storage permission in android
+
+    public static final String ALIAS_KEY_AES128 = "key_aes_128";
+
+
     /**
      * This method returns current IP address of the device in xxx.xxx.xxx.xxx format.
      * @param context -> application context

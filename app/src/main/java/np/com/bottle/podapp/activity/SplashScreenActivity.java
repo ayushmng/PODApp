@@ -28,7 +28,7 @@ public class SplashScreenActivity extends AppCompatActivity {
             @Override
             public void run() {
                 if(appPref.getBoolean(AppPreferences.IS_PROVISIONED)) {
-                    startActivity(new Intent(getApplicationContext(), MainActivity.class));
+                    startActivity(new Intent(getApplicationContext(), AdDisplayActivity.class));
                     finish();
                 } else {
                     startActivity(new Intent(getApplicationContext(), ProvisioningActivity.class));
