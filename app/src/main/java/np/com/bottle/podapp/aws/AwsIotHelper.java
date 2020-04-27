@@ -27,7 +27,7 @@ public class AwsIotHelper {
      * @param keystorePath -> Path where the keystore is saved.
      * @return -> returns "success" if the aws config is saved.
      */
-    public String saveConfiguration(String endpoint, String certificateId, String cert, String privateKey, String publicKey, String keystorePath) {
+    public static String saveConfiguration(String endpoint, String certificateId, String cert, String privateKey, String publicKey, String keystorePath) {
         try {
             CreateKeysAndCertificateResult createKeysAndCertificateResult = new CreateKeysAndCertificateResult();
             createKeysAndCertificateResult.setCertificateArn(endpoint);
@@ -58,12 +58,13 @@ public class AwsIotHelper {
      * @param keystorePath -> Path where the keystore is saved.
      * @return -> returns an instance of AWSIotMqttManager if successful connection to AWS IoT.
      */
-    private static AWSIotMqttManager initializeAwsIot(String clientId, String endpointArn, String keystorePath) {
+    public static AWSIotMqttManager initializeAwsIot(String clientId, String endpointArn, String keystorePath) {
         try {
             KeyStore clientKeyStore = AWSIotKeystoreHelper.getIotKeystore(Constants.CERTIFICATE_ID,
                     keystorePath, Constants.KEYSTORE_NAME, Constants.KEYSTORE_PASSWORD);
 
             AWSIotMqttManager mqttManager = new AWSIotMqttManager(clientId, endpointArn);
+            mqttManager.setKeepAlive(10);
 
             mqttManager.connect(clientKeyStore, new AWSIotMqttClientStatusCallback() {
                 @Override

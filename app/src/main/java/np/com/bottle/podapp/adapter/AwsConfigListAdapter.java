@@ -44,7 +44,6 @@ public class AwsConfigListAdapter extends RecyclerView.Adapter<AwsConfigListAdap
 
         tvLable.setText(aConfig.key);
         tvValue.setText(aConfig.value);
-        Log.d("test", "asdfsadfsdfsdfasdf------------------------");
     }
 
     @Override
