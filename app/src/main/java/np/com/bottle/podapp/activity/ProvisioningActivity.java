@@ -239,7 +239,7 @@ public class ProvisioningActivity extends AppCompatActivity implements Websocket
         publishMsg(json.toString());
     }
 
-    // Publish activation message to the device_uri topic.
+    // Publish activation message to the activation topic.
     // QOS 1 is being used for mqtt.
     private void publishMsg(String payload) {
         String topic = Constants.TOPIC_ACTIVATE;
