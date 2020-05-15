@@ -4,6 +4,8 @@ import android.content.Context;
 import android.net.wifi.WifiManager;
 import android.util.Log;
 
+import java.nio.charset.StandardCharsets;
+
 import static android.content.Context.WIFI_SERVICE;
 
 public class Helper {
@@ -38,5 +40,18 @@ public class Helper {
         strIpAddress = (ipAddress & 0xff) + "." + (ipAddress >> 8 & 0xff) + "." + (ipAddress >> 16 & 0xff) + "." + (ipAddress >> 24 & 0xff);
         Log.d(TAG, "ipAddress: " + strIpAddress);
         return strIpAddress;
+    }
+
+    public static String cleanNFCData(String data) {
+        if (data != null) {
+            return data.replaceAll("[^a-zA-Z0-9-_ ]","");
+        } else {
+            return "";
+        }
+    }
+
+    public static String convertHexToString(byte[] byteData) {
+        String strData = new String(byteData, StandardCharsets.UTF_8);
+        return cleanNFCData(strData);
     }
 }

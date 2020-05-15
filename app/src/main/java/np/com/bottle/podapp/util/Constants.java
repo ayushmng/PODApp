@@ -8,5 +8,9 @@ public class Constants {
 
     public static final int PORT = 8000;
 
-    public static final String TOPIC_ACTIVATE = "devActivate";
+    public static final String STAGE = "dev";
+
+    public static final String TOPIC_ACTIVATE = STAGE + "Activate";
+    public static final String TOPIC_NFC_PAYMENT = STAGE + "Application";
+
 }

@@ -3,13 +3,22 @@ package np.com.bottle.podapp.activity;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.fragment.app.DialogFragment;
+import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentTransaction;
+import androidx.viewpager.widget.ViewPager;
 
 import android.Manifest;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.net.Uri;
 import android.nfc.NfcAdapter;
 import android.os.Bundle;
+import android.os.Environment;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
+import android.widget.ImageView;
 import android.widget.Toast;
 
 import com.amazonaws.mobileconnectors.iot.AWSIotMqttManager;
@@ -29,11 +38,17 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Objects;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import np.com.bottle.podapp.AppPreferences;
 import np.com.bottle.podapp.PODApp;
 import np.com.bottle.podapp.R;
+import np.com.bottle.podapp.adapter.MediaContentAdapter;
+import np.com.bottle.podapp.fragment.NfcDetectFragment;
 import np.com.bottle.podapp.nfc.KeyInfoProvider;
 import np.com.bottle.podapp.nfc.NfcAppKeys;
 import np.com.bottle.podapp.nfc.NfcFileType;
@@ -46,11 +61,25 @@ public class AdDisplayActivity extends AppCompatActivity {
     private AppPreferences appPref;
     PODApp appClass;
 
+    // NFC
     private NfcAdapter nfcAdapter;
     private NxpNfcLib libInstance;
     private IKeyData objKEY_AES128;
 
+    // AWS
     private AWSIotMqttManager mqttManager;
+
+    // Media Content
+    private ViewPager mPager;
+    private ImageView mImageView;
+    private static int currentPage = 0;
+    private static int NUM_PAGES = 0;
+    private ArrayList<Uri> ImagesArray = new ArrayList<>();
+    private Uri[] IMAGES = {
+            Uri.parse(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES).getAbsolutePath() + "/car1.jpg"),
+            Uri.parse(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES).getAbsolutePath() + "/car2.jpeg"),
+            Uri.parse(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES).getAbsolutePath() + "/car3.jpeg")
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -60,16 +89,19 @@ public class AdDisplayActivity extends AppCompatActivity {
         appPref = new AppPreferences(getApplicationContext());
         appClass = (PODApp) getApplication();
 
+        mPager = findViewById(R.id.vpAdContent);
+
         checkPermission();
         initializedLibrary();
         initializeKeys();
+        initializeMedia();
 
         mqttManager = appClass.getMqttManager();
 
-        if(appClass.getAWSStatus()) {
-            publishMsg("Hello from android!!!!!!");
-            subscribe(appPref.getString(AppPreferences.DEVICE_URI));
-        }
+//        if(appClass.getAWSStatus()) {
+//            publishMsg("Hello from android!!!!!!");
+//            subscribe(appPref.getString(AppPreferences.DEVICE_URI));
+//        }
     }
 
     @Override
@@ -80,8 +112,8 @@ public class AdDisplayActivity extends AppCompatActivity {
 
     // Publish message to the device_uri topic.
     // QOS 1 is being used for mqtt.
-    private void publishMsg(String payload) {
-        String topic = appPref.getString(AppPreferences.DEVICE_URI);
+    private void publishMsg(String topic, String payload) {
+//        String topic = appPref.getString(AppPreferences.DEVICE_URI);
         mqttManager.publishString(payload, topic, AWSIotMqttQos.QOS1);
         Log.d(TAG, topic + ": Message Sent");
     }
@@ -166,23 +198,120 @@ public class AdDisplayActivity extends AppCompatActivity {
             Log.d(TAG, "App IDs: " + new String(app_Ids, StandardCharsets.UTF_8) );
 
             byte[] fileData = desFireEV1.readData(NfcFileType.CUSTOMER_UUID_FILE_ID, 0, 0);
-            String y = new String(fileData, StandardCharsets.UTF_8);
-            y = y.replaceAll("[^a-zA-Z0-9-]","");
-            Log.d(TAG, "App Data 1: " + y);
+            String strUuid = Helper.convertHexToString(fileData);
+            Log.d(TAG, "App Data 1: " + strUuid);
+
+            int strCardNumber = desFireEV1.getValue(NfcFileType.CARD_NUMBER_FILE_ID);
+            Log.d(TAG, "App Data 2: " + strCardNumber);
 
             byte[] fileData3 = desFireEV1.readData(NfcFileType.CUSTOMER_NAME_FILE_ID, 0, 0);
-            Log.d(TAG, "App Data 3: " + new String(fileData3, StandardCharsets.UTF_8));
+            String strName = Helper.convertHexToString(fileData3);
+            Log.d(TAG, "App Data 3: " + strName);
 
             byte[] fileData4 = desFireEV1.readData(NfcFileType.CARD_TYPE_FILE_ID, 0, 0);
-            String x = new String(fileData4, StandardCharsets.UTF_8);
-            x = x.replaceAll("[^a-zA-Z0-9]","");
-            Log.d(TAG, "App Data 4: " + x);
+            Log.d(TAG, "App Data 4: " + Helper.convertHexToString(fileData4));
+
+
+            // Creating Payload for mqtt publish
+            JSONObject paymentPayload = new JSONObject();
+            paymentPayload.put("uuid", strUuid);
+            paymentPayload.put("deviceid", appPref.getString(AppPreferences.DEVICE_ID));
+            paymentPayload.put("fleetid", appPref.getString(AppPreferences.FLEET_ID));
+            paymentPayload.put("timeStamp", "");
+            paymentPayload.put("type", "payment");
+            String payload = paymentPayload.toString();
+            Log.d(TAG, "paymentPayload: " + payload);
+
+            publishMsg(Constants.TOPIC_NFC_PAYMENT, payload);
+            showPaymentDialog(strName, strCardNumber);
         } catch (Exception e) {
             Log.e(TAG, "Auth Fail");
             Log.e(TAG, "Exception: " + e.getMessage());
         }
     }
 
+    private void showPaymentDialog(String name, int cardNumber) {
+        FragmentTransaction ft = getSupportFragmentManager().beginTransaction();
+        Fragment fragment = getSupportFragmentManager().findFragmentByTag("dialog");
+        if (fragment != null) {
+            ft.remove(fragment);
+        }
+        ft.addToBackStack(null);
+
+        Bundle args = new Bundle();
+        args.putString("name", name);
+        args.putInt("cardNumber", cardNumber);
+
+        DialogFragment dialogFragment = new NfcDetectFragment();
+        dialogFragment.setArguments(args);
+        dialogFragment.show(ft, "dialog");
+    }
+
+    // endregion
+
+    // region Content Media
+    private void initializeMedia() {
+        ImagesArray.addAll(Arrays.asList(IMAGES));
+
+        Log.d(TAG, "ImagesArray Size: " + ImagesArray.size());
+        mPager.setAdapter(new MediaContentAdapter(this, ImagesArray));
+
+        // Auto start of viewpager
+        NUM_PAGES = ImagesArray.size();
+
+        MediaThread mediaThread = new MediaThread(mPager);
+        mediaThread.start();
+    }
+
+    /**
+     * Thread for updating the ViewPager according to the image or video interval.
+     */
+    private static class MediaThread extends Thread {
+        int count;
+        ViewPager pager;
+        MediaThread(ViewPager pager) {
+            count = 0;
+            this.pager = pager;
+        }
+
+        public void run() {
+            Timer timer = new Timer();
+            timer.schedule(new TimerTask() {
+                @Override
+                public void run() {
+                    count++;
+                }
+            }, 1000, 1000);
+
+            final Handler handler = new Handler(Looper.getMainLooper());
+            final Runnable Update = new Runnable() {
+                public void run() {
+                    pager.setCurrentItem(currentPage++, true);
+                }
+            };
+
+            try {
+                while (true) {
+                    if (count >= 2) {
+                        if (currentPage == NUM_PAGES) {
+                            currentPage = 0;
+                        }
+
+                        handler.post(Update);
+
+                        count = 0;
+                    }
+                    try {
+                        Thread.sleep(500);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "Thread Error: " + e.getMessage());
+            }
+        }
+    }
     // endregion
 
     // region Permission
