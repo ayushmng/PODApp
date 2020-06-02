@@ -16,7 +16,7 @@ public class PODApp extends Application {
     private static String TAG = PODApp.class.getSimpleName();
     private AppPreferences appPref;
     private AWSIotMqttManager mqttManager;
-    private static boolean isAWSConnected = false;
+    public boolean isAWSConnected = false;
 
     @Override
     public void onCreate() {

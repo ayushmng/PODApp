@@ -9,21 +9,28 @@ import androidx.fragment.app.FragmentTransaction;
 import androidx.viewpager.widget.ViewPager;
 
 import android.Manifest;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.nfc.NfcAdapter;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
+import android.view.WindowManager;
 import android.widget.ImageView;
 import android.widget.Toast;
 
 import com.amazonaws.mobileconnectors.iot.AWSIotMqttManager;
 import com.amazonaws.mobileconnectors.iot.AWSIotMqttNewMessageCallback;
 import com.amazonaws.mobileconnectors.iot.AWSIotMqttQos;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import com.nxp.nfclib.CardType;
 import com.nxp.nfclib.KeyType;
 import com.nxp.nfclib.NxpNfcLib;
@@ -37,6 +44,8 @@ import com.nxp.nfclib.utils.Utilities;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.File;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -45,13 +54,16 @@ import java.util.Timer;
 import java.util.TimerTask;
 
 import np.com.bottle.podapp.AppPreferences;
+import np.com.bottle.podapp.ContentPreferences;
 import np.com.bottle.podapp.PODApp;
 import np.com.bottle.podapp.R;
 import np.com.bottle.podapp.adapter.MediaContentAdapter;
+import np.com.bottle.podapp.aws.AwsIotHelper;
 import np.com.bottle.podapp.fragment.NfcDetectFragment;
 import np.com.bottle.podapp.nfc.KeyInfoProvider;
 import np.com.bottle.podapp.nfc.NfcAppKeys;
 import np.com.bottle.podapp.nfc.NfcFileType;
+import np.com.bottle.podapp.services.ContentDownloadIntentService;
 import np.com.bottle.podapp.util.Constants;
 import np.com.bottle.podapp.util.Helper;
 
@@ -59,6 +71,7 @@ public class AdDisplayActivity extends AppCompatActivity {
 
     private static String TAG = AdDisplayActivity.class.getSimpleName();
     private AppPreferences appPref;
+    private ContentPreferences contentPref;
     PODApp appClass;
 
     // NFC
@@ -69,73 +82,74 @@ public class AdDisplayActivity extends AppCompatActivity {
     // AWS
     private AWSIotMqttManager mqttManager;
 
+    // MQTT Topics
+    private String TOPIC_DEVICE_URI;
+    private final String TOPIC_CONTENT_RESPONSE = Constants.TOPIC_CONTENT_RESPONSE;
+
     // Media Content
+    MediaThread mediaThread;
     private ViewPager mPager;
     private ImageView mImageView;
     private static int currentPage = 0;
     private static int NUM_PAGES = 0;
+    private boolean isEndMediaLoop = false;
     private ArrayList<Uri> ImagesArray = new ArrayList<>();
-    private Uri[] IMAGES = {
-            Uri.parse(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES).getAbsolutePath() + "/car1.jpg"),
-            Uri.parse(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES).getAbsolutePath() + "/car2.jpeg"),
-            Uri.parse(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES).getAbsolutePath() + "/car3.jpeg")
-    };
+//    private Uri[] IMAGES = {
+//            Uri.parse(getFilesDir().getAbsolutePath() + "/content/ncellimage.jpg"),
+////            Uri.parse(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES).getAbsolutePath() + "/car2.jpeg"),
+////            Uri.parse(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES).getAbsolutePath() + "/car3.jpeg")
+//    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_ad_display);
 
+//        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+
         appPref = new AppPreferences(getApplicationContext());
+        contentPref = new ContentPreferences(getApplicationContext());
         appClass = (PODApp) getApplication();
 
         mPager = findViewById(R.id.vpAdContent);
 
         checkPermission();
+        checkDirectory();
         initializedLibrary();
         initializeKeys();
         initializeMedia();
 
         mqttManager = appClass.getMqttManager();
 
-//        if(appClass.getAWSStatus()) {
-//            publishMsg("Hello from android!!!!!!");
-//            subscribe(appPref.getString(AppPreferences.DEVICE_URI));
-//        }
+        Timer timer = new Timer();
+        TimerTask subscribeTask = new TimerTask() {
+            @Override
+            public void run() {
+                if (appClass.isAWSConnected) {
+                    subscribeToContentResponse(TOPIC_CONTENT_RESPONSE);
+                }
+            }
+        };
+        timer.schedule(subscribeTask, 3000);
+
+
     }
 
     @Override
     protected void onResume() {
         super.onResume();
         libInstance.startForeGroundDispatch();
+        registerReceiver(receiver, new IntentFilter(ContentDownloadIntentService.NOTIFICATION));
     }
 
-    // Publish message to the device_uri topic.
-    // QOS 1 is being used for mqtt.
-    private void publishMsg(String topic, String payload) {
-//        String topic = appPref.getString(AppPreferences.DEVICE_URI);
-        mqttManager.publishString(payload, topic, AWSIotMqttQos.QOS1);
-        Log.d(TAG, topic + ": Message Sent");
+    @Override
+    protected void onPause() {
+        super.onPause();
+        unregisterReceiver(receiver);
     }
-
-    private void subscribe(String topic) {
-        try {
-            mqttManager.subscribeToTopic(topic, AWSIotMqttQos.QOS0,
-                    new AWSIotMqttNewMessageCallback() {
-                        @Override
-                        public void onMessageArrived(String topic, byte[] data) {
-                            Log.d(TAG, "here sub");
-                            String strData = new String(data, StandardCharsets.UTF_8);
-                            Log.d(TAG, "Message: " + strData);
-                        }
-                    });
-        } catch (Exception e) {
-            Log.e(TAG, "Error in Subscribing to Topic.");
-        }
-    }
-
 
     // region NFC Initialization
+
     private void initializedLibrary() {
         Log.d(TAG, "initializedLibrary");
         libInstance = NxpNfcLib.getInstance();
@@ -251,7 +265,9 @@ public class AdDisplayActivity extends AppCompatActivity {
 
     // region Content Media
     private void initializeMedia() {
-        ImagesArray.addAll(Arrays.asList(IMAGES));
+//        ImagesArray.addAll(Arrays.asList(IMAGES));
+
+        ImagesArray.add(Uri.parse(getFilesDir().getAbsolutePath() + "/content/ncellimage.jpg"));
 
         Log.d(TAG, "ImagesArray Size: " + ImagesArray.size());
         mPager.setAdapter(new MediaContentAdapter(this, ImagesArray));
@@ -259,14 +275,24 @@ public class AdDisplayActivity extends AppCompatActivity {
         // Auto start of viewpager
         NUM_PAGES = ImagesArray.size();
 
-        MediaThread mediaThread = new MediaThread(mPager);
+        mediaThread = new MediaThread(mPager);
         mediaThread.start();
+    }
+
+    private void checkDirectory() {
+        File dir = new File(getFilesDir().getAbsolutePath(), "content");
+        if(!dir.exists()) {
+            dir.mkdirs();
+            Log.d(TAG,"Directory Created");
+        } else {
+            Log.d(TAG,"Directory Exists");
+        }
     }
 
     /**
      * Thread for updating the ViewPager according to the image or video interval.
      */
-    private static class MediaThread extends Thread {
+    private class MediaThread extends Thread {
         int count;
         ViewPager pager;
         MediaThread(ViewPager pager) {
@@ -291,7 +317,7 @@ public class AdDisplayActivity extends AppCompatActivity {
             };
 
             try {
-                while (true) {
+                while (!isEndMediaLoop) {
                     if (count >= 2) {
                         if (currentPage == NUM_PAGES) {
                             currentPage = 0;
@@ -301,17 +327,112 @@ public class AdDisplayActivity extends AppCompatActivity {
 
                         count = 0;
                     }
-                    try {
-                        Thread.sleep(500);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
                 }
             } catch (Exception e) {
                 Log.e(TAG, "Thread Error: " + e.getMessage());
             }
         }
     }
+    // endregion
+
+    // region MQTT Publish & Subscription
+
+    // Publish message to the device_uri topic.
+    // QOS 1 is being used for mqtt.
+    private void publishMsg(String topic, String payload) {
+        mqttManager.publishString(payload, topic, AWSIotMqttQos.QOS1);
+        Log.d(TAG, topic + ": Message Sent");
+    }
+
+    private void subscribe(String topic) {
+        try {
+            mqttManager.subscribeToTopic(topic, AWSIotMqttQos.QOS0,
+                    new AWSIotMqttNewMessageCallback() {
+                        @Override
+                        public void onMessageArrived(String topic, byte[] data) {
+                            Log.d(TAG, "topic: " + topic);
+                            String strData = new String(data, StandardCharsets.UTF_8);
+                            Log.d(TAG, "Message: " + strData);
+
+                            switch (topic) {
+                                case TOPIC_CONTENT_RESPONSE:
+                                    break;
+                            }
+                        }
+                    });
+            Log.d(TAG, "Subscribed to topic: " + topic);
+        } catch (Exception e) {
+            Log.e(TAG, "Error in Subscribing to Topic.");
+        }
+    }
+
+    private void subscribeToContentResponse(String topic) {
+        try {
+            mqttManager.subscribeToTopic(topic, AWSIotMqttQos.QOS1,
+                    new AWSIotMqttNewMessageCallback() {
+                        @Override
+                        public void onMessageArrived(String topic, byte[] data) {
+                            Log.d(TAG, "topic: " + topic);
+                            String strData = new String(data, StandardCharsets.UTF_8);
+                            Log.d(TAG, "Message: " + strData);
+
+//                            isEndMediaLoop = true;
+
+                            try {
+                                JSONObject contentData = new JSONObject(strData);
+//                                String createdAt = contentData.getString("createdAt");
+
+//                                if (!Helper.compareDate(createdAt)) {
+                                if (true) {
+                                    // Saving content to preference
+                                    contentPref.putString(ContentPreferences.CONTENT_DATA, strData);
+
+                                    Intent intent = new Intent(AdDisplayActivity.this, ContentDownloadIntentService.class);
+                                    intent.putExtra(ContentDownloadIntentService.CONTENT_DATA, strData);
+
+                                    startService(intent);
+                                }
+                            } catch (JSONException e) {
+                                e.printStackTrace();
+                            }
+
+
+//                            DownloadMediaTask downloadMediaTask = new DownloadMediaTask(aStr);
+                        }
+                    });
+            Log.d(TAG, "Subscribed to topic: " + topic);
+        } catch (Exception e) {
+            Log.e(TAG, "Error in Subscribing to Topic.");
+        }
+    }
+    // endregion
+
+    // region Receiver
+
+    private BroadcastReceiver receiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            Bundle bundle = intent.getExtras();
+            if(bundle != null) {
+                int resultCode = bundle.getInt(ContentDownloadIntentService.RESULT);
+
+                if(resultCode == 200) {
+                    Toast.makeText(AdDisplayActivity.this, "File downloaded.", Toast.LENGTH_SHORT).show();
+                } else {
+                    Toast.makeText(AdDisplayActivity.this, "File downloaded Error.", Toast.LENGTH_SHORT).show();
+                }
+            }
+
+            String path = getFilesDir().getAbsolutePath() + "/content";
+            File directory = new File(path);
+            File[] files = directory.listFiles();
+            Log.d(TAG, "Files Count: " + files.length);
+            for (int i = 0; i < files.length; i++) {
+                Log.d(TAG, "Filename: " + files[i].getName());
+            }
+        }
+    };
+
     // endregion
 
     // region Permission

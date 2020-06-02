@@ -3,26 +3,14 @@ package np.com.bottle.podapp;
 import android.content.Context;
 import android.content.SharedPreferences;
 
-public class AppPreferences {
+public class ContentPreferences {
     private SharedPreferences preferences;
-    private final String APP_PREFERENCES_FILE_NAME = "aws_credential";
+    private final String APP_PREFERENCES_FILE_NAME = "content_details";
 
-    public final static String CUSTOMER_SPECIFIC_ENDPOINT_ARN = "endpoint_arn";
-    public final static String CLIENT_ID = "client_id";
+    public final static String CONTENT_DATA = "content_data";
+    public final static String CONTENT_DATE = "content_date";
 
-    public final static String DEVICE_NAME = "device_name";
-    public final static String DEVICE_ID = "device_id";
-    public final static String ACTIVATION_TOKEN = "activation_token";
-    public final static String DEVICE_URI = "device_uri";
-    public final static String FLEET_ID = "fleet_id";
-    public final static String MQTT_HOST = "mqtt_host";
-
-    public final static String AWS_IOT_CERTIFICATE = "iot_certificate";
-    public final static String AWS_IOT_PRIVATE_KEY = "iot_private_key";
-    public final static String AWS_IOT_PUBLIC_KEY = "iot_public_key";
-    public final static String IS_PROVISIONED = "provision_status";
-
-    public AppPreferences(Context context) {
+    public ContentPreferences(Context context) {
         preferences = context.getSharedPreferences(APP_PREFERENCES_FILE_NAME, Context.MODE_PRIVATE);
     }
 
