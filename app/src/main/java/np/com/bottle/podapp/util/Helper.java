@@ -4,6 +4,7 @@ import android.content.Context;
 import android.net.wifi.WifiManager;
 import android.util.Log;
 
+import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -99,6 +100,15 @@ public class Helper {
             return true;
         } else {
             return false;
+        }
+    }
+
+    public static void fileCount(String path) {
+        File directory = new File(path);
+        File[] files = directory.listFiles();
+        Log.d(TAG, "Files Count: " + files.length);
+        for (int i = 0; i < files.length; i++) {
+            Log.d(TAG, "Filename: " + files[i].getName());
         }
     }
 }

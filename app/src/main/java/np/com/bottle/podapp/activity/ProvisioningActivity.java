@@ -7,6 +7,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import android.Manifest;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.nfc.Tag;
 import android.os.Bundle;
@@ -267,7 +268,8 @@ public class ProvisioningActivity extends AppCompatActivity implements Websocket
                                 json = new JSONObject(strData);
                                 if(json.getString("deviceId").equals(appPref.getString(AppPreferences.DEVICE_ID))) {
                                     appPref.putBoolean(AppPreferences.IS_PROVISIONED, true);
-
+                                    startActivity(new Intent(getApplicationContext(), AdDisplayActivity.class));
+                                    finish();
                                 }
 
                             } catch (JSONException e) {

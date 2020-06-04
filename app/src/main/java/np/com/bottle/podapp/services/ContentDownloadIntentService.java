@@ -36,6 +36,9 @@ public class ContentDownloadIntentService extends IntentService {
     public static final String RESULT = "result"; // 200 for success, 101 for fail;
     public static final String NOTIFICATION = "np.com.bottle.podapp";
 
+    public static final int RESULT_CODE_SUCCESS = 200;
+    public static final int RESULT_CODE_FAIL = 101;
+
     public ContentDownloadIntentService() {
         super("ContentDownloadIntentService");
     }
@@ -64,10 +67,10 @@ public class ContentDownloadIntentService extends IntentService {
                 }
             }
 
-            publishResults(200);
+            publishResults(RESULT_CODE_SUCCESS);
         } catch (Exception e) {
             Log.e(TAG, "Error: " + e.toString());
-            publishResults(101);
+            publishResults(RESULT_CODE_FAIL);
         }
     }
 

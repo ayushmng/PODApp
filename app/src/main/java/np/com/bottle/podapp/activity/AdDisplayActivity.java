@@ -41,6 +41,7 @@ import com.nxp.nfclib.exceptions.NxpNfcLibException;
 import com.nxp.nfclib.interfaces.IKeyData;
 import com.nxp.nfclib.utils.Utilities;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -49,6 +50,7 @@ import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -60,6 +62,8 @@ import np.com.bottle.podapp.R;
 import np.com.bottle.podapp.adapter.MediaContentAdapter;
 import np.com.bottle.podapp.aws.AwsIotHelper;
 import np.com.bottle.podapp.fragment.NfcDetectFragment;
+import np.com.bottle.podapp.interfaces.ViewPagerPositionListener;
+import np.com.bottle.podapp.models.Media;
 import np.com.bottle.podapp.nfc.KeyInfoProvider;
 import np.com.bottle.podapp.nfc.NfcAppKeys;
 import np.com.bottle.podapp.nfc.NfcFileType;
@@ -91,6 +95,7 @@ public class AdDisplayActivity extends AppCompatActivity {
     private ViewPager mPager;
     private ImageView mImageView;
     private static int currentPage = 0;
+    private static int currentPosition = 0;
     private static int NUM_PAGES = 0;
     private boolean isEndMediaLoop = false;
     private ArrayList<Uri> ImagesArray = new ArrayList<>();
@@ -99,6 +104,8 @@ public class AdDisplayActivity extends AppCompatActivity {
 ////            Uri.parse(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES).getAbsolutePath() + "/car2.jpeg"),
 ////            Uri.parse(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES).getAbsolutePath() + "/car3.jpeg")
 //    };
+    private List<Media> mediaList;
+    private MediaContentAdapter mediaContentAdapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -110,6 +117,8 @@ public class AdDisplayActivity extends AppCompatActivity {
         appPref = new AppPreferences(getApplicationContext());
         contentPref = new ContentPreferences(getApplicationContext());
         appClass = (PODApp) getApplication();
+
+        mediaList = new ArrayList<>();
 
         mPager = findViewById(R.id.vpAdContent);
 
@@ -146,6 +155,12 @@ public class AdDisplayActivity extends AppCompatActivity {
     protected void onPause() {
         super.onPause();
         unregisterReceiver(receiver);
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        isEndMediaLoop = true;
     }
 
     // region NFC Initialization
@@ -266,17 +281,52 @@ public class AdDisplayActivity extends AppCompatActivity {
     // region Content Media
     private void initializeMedia() {
 //        ImagesArray.addAll(Arrays.asList(IMAGES));
-
+        Helper.fileCount(getFilesDir().getAbsolutePath() + "/content");
+        populateMedia(contentPref.getString(ContentPreferences.CONTENT_DATA));
         ImagesArray.add(Uri.parse(getFilesDir().getAbsolutePath() + "/content/ncellimage.jpg"));
 
         Log.d(TAG, "ImagesArray Size: " + ImagesArray.size());
-        mPager.setAdapter(new MediaContentAdapter(this, ImagesArray));
+        mediaContentAdapter = new MediaContentAdapter(this, ImagesArray, mediaList);
+        mPager.setAdapter(mediaContentAdapter);
 
         // Auto start of viewpager
-        NUM_PAGES = ImagesArray.size();
+//        NUM_PAGES = ImagesArray.size();
+        NUM_PAGES = mediaList.size();
 
         mediaThread = new MediaThread(mPager);
         mediaThread.start();
+    }
+
+    private void populateMedia(String contentData) {
+        mediaList.clear();
+
+        try {
+            JSONObject jPayload = new JSONObject(contentData);
+            JSONArray jaData = jPayload.getJSONArray("data");
+
+            Log.d(TAG, "data: " + jPayload.getString("data"));
+            Log.d(TAG, "array: " + jaData.getJSONObject(0));
+            Log.d(TAG, "data array length: " + jaData.length());
+
+            for (int i = 0; i < jaData.length(); i++) {
+                JSONArray jaContents = jaData.getJSONObject(i).getJSONArray("contents");
+
+                for (int j = 0; j < jaContents.length(); j++) {
+                    JSONObject jContent = jaContents.getJSONObject(j);
+                    Log.d(TAG, "Level: " + i + " ---- " + "Name: " + jContent.getString("name"));
+                    mediaList.add(new Media(
+                            Uri.parse(getFilesDir().getAbsolutePath() + "/content/" + jContent.getString("name") + "." + jContent.getString("extension")),
+                            jContent.getInt("interval"),
+                            jContent.getString("type"),
+                            jaData.getJSONObject(i).getInt("level")
+                    ));
+                }
+            }
+        } catch (JSONException e) {
+            Log.e(TAG, "Error in parsing JSON data.");
+        } catch (Exception ex) {
+            Log.e(TAG, "Error in populating media list.");
+        }
     }
 
     private void checkDirectory() {
@@ -306,33 +356,40 @@ public class AdDisplayActivity extends AppCompatActivity {
                 @Override
                 public void run() {
                     count++;
+                    Log.d(TAG, "count: " + count);
                 }
             }, 1000, 1000);
 
             final Handler handler = new Handler(Looper.getMainLooper());
             final Runnable Update = new Runnable() {
                 public void run() {
-                    pager.setCurrentItem(currentPage++, true);
+                    pager.setCurrentItem(++currentPage, true);
+                    Log.d(TAG, "currentPage: --- " + currentPage);
+                    if (currentPage == NUM_PAGES) {
+                        currentPage = 0;
+                    }
                 }
             };
 
             try {
                 while (!isEndMediaLoop) {
-                    if (count >= 2) {
-                        if (currentPage == NUM_PAGES) {
-                            currentPage = 0;
-                        }
+//                    Log.d(TAG, "count: " + count);
+                    if (count >= mediaList.get(pager.getCurrentItem()).Interval) {
+                        Log.d(TAG, "current page: " + pager.getCurrentItem());
+                        Log.d(TAG, "current interval: " + mediaList.get(pager.getCurrentItem()).Interval);
 
                         handler.post(Update);
 
                         count = 0;
                     }
+
                 }
             } catch (Exception e) {
                 Log.e(TAG, "Thread Error: " + e.getMessage());
             }
         }
     }
+
     // endregion
 
     // region MQTT Publish & Subscription
@@ -416,8 +473,10 @@ public class AdDisplayActivity extends AppCompatActivity {
             if(bundle != null) {
                 int resultCode = bundle.getInt(ContentDownloadIntentService.RESULT);
 
-                if(resultCode == 200) {
+                if(resultCode == ContentDownloadIntentService.RESULT_CODE_SUCCESS) {
                     Toast.makeText(AdDisplayActivity.this, "File downloaded.", Toast.LENGTH_SHORT).show();
+                    populateMedia(contentPref.getString(ContentPreferences.CONTENT_DATA));
+                    mediaContentAdapter.notifyDataSetChanged();
                 } else {
                     Toast.makeText(AdDisplayActivity.this, "File downloaded Error.", Toast.LENGTH_SHORT).show();
                 }
