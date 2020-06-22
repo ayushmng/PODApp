@@ -14,6 +14,7 @@ import androidx.annotation.NonNull;
 import androidx.viewpager.widget.PagerAdapter;
 
 import com.google.android.exoplayer2.ExoPlayerFactory;
+import com.google.android.exoplayer2.Player;
 import com.google.android.exoplayer2.SimpleExoPlayer;
 import com.google.android.exoplayer2.source.MediaSource;
 import com.google.android.exoplayer2.source.ProgressiveMediaSource;
@@ -73,6 +74,7 @@ public class MediaContentAdapter extends PagerAdapter {
 
             player.prepare(mediaSource);
             player.setPlayWhenReady(true);
+            player.setRepeatMode(Player.REPEAT_MODE_ONE);
             playerView.setPlayer(player);
             playerView.setVisibility(View.VISIBLE);
         }

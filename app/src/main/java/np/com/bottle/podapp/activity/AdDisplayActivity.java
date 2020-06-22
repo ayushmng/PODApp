@@ -283,9 +283,11 @@ public class AdDisplayActivity extends AppCompatActivity {
 //        ImagesArray.addAll(Arrays.asList(IMAGES));
         Helper.fileCount(getFilesDir().getAbsolutePath() + "/content");
         populateMedia(contentPref.getString(ContentPreferences.CONTENT_DATA));
-        ImagesArray.add(Uri.parse(getFilesDir().getAbsolutePath() + "/content/ncellimage.jpg"));
 
-        Log.d(TAG, "ImagesArray Size: " + ImagesArray.size());
+        Log.d(TAG, "----- content data: " + contentPref.getString(ContentPreferences.CONTENT_DATA));
+        Log.d(TAG, "----- content count: " + mediaList.size());
+
+        ImagesArray.add(Uri.parse(getFilesDir().getAbsolutePath() + "/content/ncellimage.jpg"));
         mediaContentAdapter = new MediaContentAdapter(this, ImagesArray, mediaList);
         mPager.setAdapter(mediaContentAdapter);
 
@@ -314,6 +316,7 @@ public class AdDisplayActivity extends AppCompatActivity {
                 for (int j = 0; j < jaContents.length(); j++) {
                     JSONObject jContent = jaContents.getJSONObject(j);
                     Log.d(TAG, "Level: " + i + " ---- " + "Name: " + jContent.getString("name"));
+
                     mediaList.add(new Media(
                             Uri.parse(getFilesDir().getAbsolutePath() + "/content/" + jContent.getString("name") + "." + jContent.getString("extension")),
                             jContent.getInt("interval"),
@@ -363,17 +366,18 @@ public class AdDisplayActivity extends AppCompatActivity {
             final Handler handler = new Handler(Looper.getMainLooper());
             final Runnable Update = new Runnable() {
                 public void run() {
-                    pager.setCurrentItem(++currentPage, true);
-                    Log.d(TAG, "currentPage: --- " + currentPage);
-                    if (currentPage == NUM_PAGES) {
+                    if (currentPage == NUM_PAGES - 1) {
                         currentPage = 0;
+                    } else {
+                        currentPage++;
                     }
+                    pager.setCurrentItem(currentPage, true);
+                    Log.d(TAG, "currentPage: --- " + currentPage);
                 }
             };
 
             try {
                 while (!isEndMediaLoop) {
-//                    Log.d(TAG, "count: " + count);
                     if (count >= mediaList.get(pager.getCurrentItem()).Interval) {
                         Log.d(TAG, "current page: " + pager.getCurrentItem());
                         Log.d(TAG, "current interval: " + mediaList.get(pager.getCurrentItem()).Interval);
@@ -387,7 +391,11 @@ public class AdDisplayActivity extends AppCompatActivity {
             } catch (Exception e) {
                 Log.e(TAG, "Thread Error: " + e.getMessage());
             }
+
+            timer.cancel();
         }
+
+
     }
 
     // endregion
@@ -433,7 +441,6 @@ public class AdDisplayActivity extends AppCompatActivity {
                             String strData = new String(data, StandardCharsets.UTF_8);
                             Log.d(TAG, "Message: " + strData);
 
-//                            isEndMediaLoop = true;
 
                             try {
                                 JSONObject contentData = new JSONObject(strData);
@@ -448,6 +455,7 @@ public class AdDisplayActivity extends AppCompatActivity {
                                     intent.putExtra(ContentDownloadIntentService.CONTENT_DATA, strData);
 
                                     startService(intent);
+                                    isEndMediaLoop = true;
                                 }
                             } catch (JSONException e) {
                                 e.printStackTrace();
@@ -477,6 +485,11 @@ public class AdDisplayActivity extends AppCompatActivity {
                     Toast.makeText(AdDisplayActivity.this, "File downloaded.", Toast.LENGTH_SHORT).show();
                     populateMedia(contentPref.getString(ContentPreferences.CONTENT_DATA));
                     mediaContentAdapter.notifyDataSetChanged();
+
+
+                    isEndMediaLoop = false;
+                    mediaThread = new MediaThread(mPager);
+                    mediaThread.start();
                 } else {
                     Toast.makeText(AdDisplayActivity.this, "File downloaded Error.", Toast.LENGTH_SHORT).show();
                 }
