@@ -7,11 +7,13 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import android.Manifest;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.nfc.Tag;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
+import android.widget.Button;
 import android.widget.TextView;
 
 import com.amazonaws.mobileconnectors.iot.AWSIotKeystoreHelper;
@@ -58,6 +60,7 @@ public class ProvisioningActivity extends AppCompatActivity implements Websocket
     private TextView tvIpAddress;
     private TextView tvPort;
     private RecyclerView rvAwsConfig;
+    private Button btnProvision;
 
     private AWSIotMqttManager mqttManager;
     private KeyStore clientKeyStore;
@@ -72,6 +75,7 @@ public class ProvisioningActivity extends AppCompatActivity implements Websocket
         tvIpAddress = findViewById(R.id.tvIpAddress);
         tvPort = findViewById(R.id.tvPort);
         rvAwsConfig = findViewById(R.id.rvAwsConfig);
+        btnProvision = findViewById(R.id.btnProvision);
 
         appPref = new AppPreferences(getApplicationContext());
         rvDataList = new ArrayList<DataList>();
@@ -90,6 +94,8 @@ public class ProvisioningActivity extends AppCompatActivity implements Websocket
         rvAwsConfig.setLayoutManager(new LinearLayoutManager(this));
 
 //        connectToAws();
+
+        btnProvision.setOnClickListener(btnProvisionListener);
     }
 
     @Override
@@ -239,12 +245,13 @@ public class ProvisioningActivity extends AppCompatActivity implements Websocket
         publishMsg(json.toString());
     }
 
-    // Publish activation message to the device_uri topic.
+    // Publish activation message to the activation topic.
     // QOS 1 is being used for mqtt.
     private void publishMsg(String payload) {
+        subscribe(Constants.TOPIC_ACTIVATE + "_" + appPref.getString(AppPreferences.DEVICE_ID));
+
         String topic = Constants.TOPIC_ACTIVATE;
         mqttManager.publishString(payload, topic, AWSIotMqttQos.QOS1);
-        subscribe(Constants.TOPIC_ACTIVATE + "_" + appPref.getString(AppPreferences.DEVICE_ID));
         Log.d(TAG, "Activation Message Sent");
     }
 
@@ -261,7 +268,8 @@ public class ProvisioningActivity extends AppCompatActivity implements Websocket
                                 json = new JSONObject(strData);
                                 if(json.getString("deviceId").equals(appPref.getString(AppPreferences.DEVICE_ID))) {
                                     appPref.putBoolean(AppPreferences.IS_PROVISIONED, true);
-
+                                    startActivity(new Intent(getApplicationContext(), AdDisplayActivity.class));
+                                    finish();
                                 }
 
                             } catch (JSONException e) {
@@ -273,6 +281,13 @@ public class ProvisioningActivity extends AppCompatActivity implements Websocket
             Log.e(TAG, "Error in Subscribing to Topic.");
         }
     }
+
+    private View.OnClickListener btnProvisionListener = new View.OnClickListener() {
+        @Override
+        public void onClick(View view) {
+            connectToAws();
+        }
+    };
 
     // region Permission Section
     /**
