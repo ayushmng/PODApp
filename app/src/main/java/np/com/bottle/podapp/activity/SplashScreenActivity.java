@@ -36,6 +36,7 @@ public class SplashScreenActivity extends AppCompatActivity {
             public void run() {
                 if(appPref.getBoolean(AppPreferences.IS_PROVISIONED)) {
                     startActivity(new Intent(getApplicationContext(), AdDisplayActivity.class));
+//                    startActivity(new Intent(getApplicationContext(), SettingsActivity.class));
                     finish();
                 } else {
                     startActivity(new Intent(getApplicationContext(), ProvisioningActivity.class));
@@ -57,6 +58,14 @@ public class SplashScreenActivity extends AppCompatActivity {
         if(ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_WIFI_STATE) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, new String[] {Manifest.permission.ACCESS_WIFI_STATE}, Helper.REQUEST_CODE_ACCESS_WIFI_STATE);
         }
+
+        if(ContextCompat.checkSelfPermission(this, Manifest.permission.CHANGE_WIFI_STATE) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, new String[] {Manifest.permission.CHANGE_WIFI_STATE}, Helper.REQUEST_CODE_CHANGE_WIFI_STATE);
+        }
+
+        if(ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, new String[] {Manifest.permission.ACCESS_FINE_LOCATION}, Helper.REQUEST_CODE_ACCESS_FINE_LOCATION);
+        }
     }
 
     @Override
@@ -74,6 +83,18 @@ public class SplashScreenActivity extends AppCompatActivity {
                     Toast.makeText(this, "Requested Permission Granted", Toast.LENGTH_SHORT).show();
                 } else {
                     Toast.makeText(this, "This app was not allowed to use External Storage", Toast.LENGTH_SHORT).show();
+                }
+            case Helper.REQUEST_CODE_CHANGE_WIFI_STATE:
+                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    Toast.makeText(this, "Requested Permission Granted", Toast.LENGTH_SHORT).show();
+                } else {
+                    Toast.makeText(this, "This app was not allowed to access Change WiFi State", Toast.LENGTH_SHORT).show();
+                }
+            case Helper.REQUEST_CODE_ACCESS_FINE_LOCATION:
+                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    Toast.makeText(this, "Requested Permission Granted", Toast.LENGTH_SHORT).show();
+                } else {
+                    Toast.makeText(this, "This app was not allowed to use Fine Location", Toast.LENGTH_SHORT).show();
                 }
         }
     }
