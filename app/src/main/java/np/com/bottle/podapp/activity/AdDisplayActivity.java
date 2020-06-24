@@ -79,16 +79,12 @@ public class AdDisplayActivity extends AppCompatActivity {
     private AWSIotMqttManager mqttManager;
 
     // MQTT Topics
-    private String TOPIC_DEVICE_URI;
     private final String TOPIC_CONTENT_RESPONSE = Constants.TOPIC_CONTENT_RESPONSE;
     private final String TOPIC_CONTENT_REQUEST = Constants.TOPIC_CONTENT_REQUEST;
 
     private ViewPager mPager;
-    private ImageView mImageView;
     private static int currentPage = 0;
-    private static int currentPosition = 0;
     private static int NUM_PAGES = 0;
-    private boolean isMediaLoop = false;
     private ArrayList<Uri> ImagesArray = new ArrayList<>();
     private List<Media> mediaList;
     private MediaContentAdapter mediaContentAdapter;
@@ -141,14 +137,14 @@ public class AdDisplayActivity extends AppCompatActivity {
         super.onResume();
         libInstance.startForeGroundDispatch();
         registerReceiver(receiver, new IntentFilter(ContentDownloadIntentService.NOTIFICATION));
-        mediaLoop();
+        mediaLoop(Constants.MEDIALOOPSTATUS.START);
     }
 
     @Override
     protected void onPause() {
         super.onPause();
         unregisterReceiver(receiver);
-        mediaChangeTimer.cancel();
+        mediaLoop(Constants.MEDIALOOPSTATUS.STOP);
     }
 
     @Override
@@ -332,37 +328,44 @@ public class AdDisplayActivity extends AppCompatActivity {
         }
     }
 
-    private void mediaLoop() {
-        mediaChangeTimer = new Timer();
+    private void mediaLoop(Constants.MEDIALOOPSTATUS medialoopstatus) {
+        switch (medialoopstatus) {
+            case START:
+                mediaChangeTimer = new Timer();
 
-        final Handler handler = new Handler(Looper.getMainLooper());
-        final Runnable Update = new Runnable() {
-            public void run() {
-                if (currentPage == NUM_PAGES - 1) {
-                    currentPage = 0;
-                } else {
-                    currentPage++;
-                }
-                mPager.setCurrentItem(currentPage, true);
-                Log.d(TAG, "currentPage: --- " + currentPage);
-            }
-        };
+                final Handler handler = new Handler(Looper.getMainLooper());
+                final Runnable Update = new Runnable() {
+                    public void run() {
+                        if (currentPage == NUM_PAGES - 1) {
+                            currentPage = 0;
+                        } else {
+                            currentPage++;
+                        }
+                        mPager.setCurrentItem(currentPage, true);
+                        Log.d(TAG, "currentPage: --- " + currentPage);
+                    }
+                };
 
-        mediaChangeTimer.schedule(new TimerTask() {
-            @Override
-            public void run() {
-                count++;
-                Log.d(TAG, "count: " + count);
-                if (count >= mediaList.get(mPager.getCurrentItem()).Interval) {
-                    Log.d(TAG, "current page: " + mPager.getCurrentItem());
-                    Log.d(TAG, "current interval: " + mediaList.get(mPager.getCurrentItem()).Interval);
+                mediaChangeTimer.schedule(new TimerTask() {
+                    @Override
+                    public void run() {
+                        count++;
+                        Log.d(TAG, "count: " + count);
+                        if (count >= mediaList.get(mPager.getCurrentItem()).Interval) {
+                            Log.d(TAG, "current page: " + mPager.getCurrentItem());
+                            Log.d(TAG, "current interval: " + mediaList.get(mPager.getCurrentItem()).Interval);
 
-                    handler.post(Update);
+                            handler.post(Update);
 
-                    count = 0;
-                }
-            }
-        }, 1000, 1000);
+                            count = 0;
+                        }
+                    }
+                }, 1000, 1000);
+                break;
+            case STOP:
+                mediaChangeTimer.cancel();
+                break;
+        }
     }
 
     // endregion
@@ -423,8 +426,7 @@ public class AdDisplayActivity extends AppCompatActivity {
                                     intent.putExtra(ContentDownloadIntentService.CONTENT_DATA, strPayload);
 
                                     startService(intent);
-                                    isMediaLoop = false;
-                                    mediaChangeTimer.cancel();
+                                    mediaLoop(Constants.MEDIALOOPSTATUS.STOP);
                                 } else {
                                     runOnUiThread(new Runnable() {
                                         @Override
@@ -461,10 +463,7 @@ public class AdDisplayActivity extends AppCompatActivity {
                     Toast.makeText(AdDisplayActivity.this, "File downloaded.", Toast.LENGTH_SHORT).show();
                     populateMedia(contentPref.getString(ContentPreferences.CONTENT_DATA));
                     mediaContentAdapter.notifyDataSetChanged();
-
-
-                    isMediaLoop = true;
-                    mediaLoop();
+                    mediaLoop(Constants.MEDIALOOPSTATUS.START);
                 } else {
                     Toast.makeText(AdDisplayActivity.this, "File downloaded Error.", Toast.LENGTH_SHORT).show();
                 }

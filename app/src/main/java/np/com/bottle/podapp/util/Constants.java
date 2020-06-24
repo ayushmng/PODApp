@@ -15,4 +15,6 @@ public class Constants {
     public static final String TOPIC_CONTENT_REQUEST = "stage/" + STAGE + "/org/5e56154c85da5800084e136a/content/request";
     public static final String TOPIC_CONTENT_RESPONSE = "stage/" + STAGE + "/org/5e56154c85da5800084e136a/content/response";
 
+    public enum MEDIALOOPSTATUS {START, STOP};
+
 }
