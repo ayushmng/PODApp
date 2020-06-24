@@ -81,6 +81,7 @@ public class AdDisplayActivity extends AppCompatActivity {
     // MQTT Topics
     private String TOPIC_DEVICE_URI;
     private final String TOPIC_CONTENT_RESPONSE = Constants.TOPIC_CONTENT_RESPONSE;
+    private final String TOPIC_CONTENT_REQUEST = Constants.TOPIC_CONTENT_REQUEST;
 
     private ViewPager mPager;
     private ImageView mImageView;
@@ -94,10 +95,13 @@ public class AdDisplayActivity extends AppCompatActivity {
     private Timer mediaChangeTimer;
     private int count = 0;
 
+    Context context;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_ad_display);
+        context = this;
 
 //        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
@@ -123,6 +127,7 @@ public class AdDisplayActivity extends AppCompatActivity {
             public void run() {
                 if (appClass.isAWSConnected) {
                     subscribeToContentResponse(TOPIC_CONTENT_RESPONSE);
+                    publishMsg(TOPIC_CONTENT_REQUEST, "");
                 }
             }
         };
@@ -400,25 +405,33 @@ public class AdDisplayActivity extends AppCompatActivity {
                         @Override
                         public void onMessageArrived(String topic, byte[] data) {
                             Log.d(TAG, "topic: " + topic);
-                            String strData = new String(data, StandardCharsets.UTF_8);
-                            Log.d(TAG, "Message: " + strData);
+                            String strPayload = new String(data, StandardCharsets.UTF_8);
+                            Log.d(TAG, "Message: " + strPayload);
 
 
                             try {
-                                JSONObject contentData = new JSONObject(strData);
-//                                String createdAt = contentData.getString("createdAt");
+                                JSONObject payloadData = new JSONObject(strPayload);
+                                String createdAt = payloadData.getString("createdAt");
 
-//                                if (!Helper.compareDate(createdAt)) {
-                                if (true) {
+                                Log.d(TAG, "------------ Date: " + Helper.compareDate(createdAt));
+
+                                if (!Helper.compareDate(createdAt)) {
                                     // Saving content to preference
-                                    contentPref.putString(ContentPreferences.CONTENT_DATA, strData);
+                                    contentPref.putString(ContentPreferences.CONTENT_DATA, strPayload);
 
                                     Intent intent = new Intent(AdDisplayActivity.this, ContentDownloadIntentService.class);
-                                    intent.putExtra(ContentDownloadIntentService.CONTENT_DATA, strData);
+                                    intent.putExtra(ContentDownloadIntentService.CONTENT_DATA, strPayload);
 
                                     startService(intent);
                                     isMediaLoop = false;
                                     mediaChangeTimer.cancel();
+                                } else {
+                                    runOnUiThread(new Runnable() {
+                                        @Override
+                                        public void run() {
+                                            Toast.makeText(context.getApplicationContext(), R.string.content_status_updated, Toast.LENGTH_LONG).show();
+                                        }
+                                    });
                                 }
                             } catch (JSONException e) {
                                 e.printStackTrace();
