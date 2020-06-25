@@ -14,30 +14,36 @@ import android.content.IntentFilter;
 import android.net.wifi.ScanResult;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
-import android.util.Log;
-import android.widget.ListView;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
 
+import np.com.bottle.podapp.AppPreferences;
 import np.com.bottle.podapp.R;
+import np.com.bottle.podapp.adapter.AwsConfigListAdapter;
 import np.com.bottle.podapp.adapter.WifiListAdapter;
-import np.com.bottle.podapp.fragment.NfcDetectFragment;
 import np.com.bottle.podapp.fragment.WifiConfigFragment;
 import np.com.bottle.podapp.interfaces.OnItemClickListener;
+import np.com.bottle.podapp.models.DataList;
 
 public class SettingsActivity extends AppCompatActivity implements OnItemClickListener {
 
     private static String TAG = SettingsActivity.class.getSimpleName();
 
     private RecyclerView rvWifi;
+    private RecyclerView rvDeviceDetails;
+
+    private AppPreferences appPref;
+    private List<DataList> deviceDetailList;
 
     private WifiManager mWifiManager;
     private List<ScanResult> wifiList;
     private WifiListAdapter adapter;
     private ScanResult selectedScanResult;
+
+    private AwsConfigListAdapter deviceDetailsAdapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -45,14 +51,23 @@ public class SettingsActivity extends AppCompatActivity implements OnItemClickLi
         setContentView(R.layout.activity_settings);
 
         rvWifi = findViewById(R.id.rvWifi);
+        rvDeviceDetails = findViewById(R.id.rvDeviceDetails);
 
+        appPref = new AppPreferences(getApplicationContext());
+        deviceDetailList = new ArrayList<>();
         wifiList = new ArrayList<>();
+
+        // Wifi RecyclerView Section
         populateWifiList(wifiList);
         adapter = new WifiListAdapter(this, wifiList);
         rvWifi.setAdapter(adapter);
         rvWifi.setLayoutManager((new LinearLayoutManager(this)));
-
         mWifiManager = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
+
+        populateDeviceDetails();
+        deviceDetailsAdapter = new AwsConfigListAdapter(deviceDetailList);
+        rvDeviceDetails.setAdapter(deviceDetailsAdapter);
+        rvDeviceDetails.setLayoutManager(new LinearLayoutManager(this));
 
 
         Timer timer = new Timer();
@@ -100,6 +115,16 @@ public class SettingsActivity extends AppCompatActivity implements OnItemClickLi
                 wifiList.add(result);
             }
         }
+    }
+
+    private void populateDeviceDetails() {
+        deviceDetailList.clear();
+        deviceDetailList.add(new DataList(AppPreferences.DEVICE_NAME, appPref.getString(AppPreferences.DEVICE_NAME)));
+        deviceDetailList.add(new DataList(AppPreferences.DEVICE_ID, appPref.getString(AppPreferences.DEVICE_ID)));
+        deviceDetailList.add(new DataList(AppPreferences.ACTIVATION_TOKEN, appPref.getString(AppPreferences.ACTIVATION_TOKEN)));
+        deviceDetailList.add(new DataList(AppPreferences.DEVICE_URI, appPref.getString(AppPreferences.DEVICE_URI)));
+        deviceDetailList.add(new DataList(AppPreferences.FLEET_ID, appPref.getString(AppPreferences.FLEET_ID)));
+        deviceDetailList.add(new DataList(AppPreferences.MQTT_HOST, appPref.getString(AppPreferences.MQTT_HOST)));
     }
 
     @Override

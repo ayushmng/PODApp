@@ -90,6 +90,7 @@ public class AdDisplayActivity extends AppCompatActivity {
     private MediaContentAdapter mediaContentAdapter;
     private Timer mediaChangeTimer;
     private int count = 0;
+    private String contentDate;
 
     Context context;
 
@@ -292,6 +293,8 @@ public class AdDisplayActivity extends AppCompatActivity {
             JSONObject jPayload = new JSONObject(contentData);
             JSONArray jaData = jPayload.getJSONArray("data");
 
+            contentDate = jPayload.getString("createdAt");
+
             Log.d(TAG, "data: " + jPayload.getString("data"));
             Log.d(TAG, "array: " + jaData.getJSONObject(0));
             Log.d(TAG, "data array length: " + jaData.length());
@@ -328,6 +331,10 @@ public class AdDisplayActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * Method to swipe the viewpager content automatically at the given interval of the contents.
+     * @param medialoopstatus enum to start or stop the media loop.
+     */
     private void mediaLoop(Constants.MEDIALOOPSTATUS medialoopstatus) {
         switch (medialoopstatus) {
             case START:
@@ -365,6 +372,48 @@ public class AdDisplayActivity extends AppCompatActivity {
             case STOP:
                 mediaChangeTimer.cancel();
                 break;
+
+            default:
+                break;
+        }
+    }
+
+    class DownloadThread extends Thread {
+        String strPayload;
+
+        public DownloadThread(String strPayload) {
+            this.strPayload = strPayload;
+        }
+
+        public void run() {
+            try {
+                Log.d(TAG, "------------------ Message hereeeee");
+                JSONObject payloadData = new JSONObject(strPayload);
+                String createdAt = payloadData.getString("createdAt");
+
+                Log.d(TAG, "------------ Date: " + contentDate.equals(createdAt));
+
+//                                if (!Helper.compareDate(createdAt)) {
+                if (!Helper.compareDate(contentDate)) {
+                    // Saving content to preference
+                    contentPref.putString(ContentPreferences.CONTENT_DATA, strPayload);
+
+                    Intent intent = new Intent(AdDisplayActivity.this, ContentDownloadIntentService.class);
+                    intent.putExtra(ContentDownloadIntentService.CONTENT_DATA, strPayload);
+
+                    mediaLoop(Constants.MEDIALOOPSTATUS.STOP);
+                    startService(intent);
+                } else {
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            Toast.makeText(context.getApplicationContext(), R.string.content_status_updated, Toast.LENGTH_LONG).show();
+                        }
+                    });
+                }
+            } catch (JSONException e) {
+                Log.e(TAG, "Error: " + e.getMessage());
+            }
         }
     }
 
@@ -407,40 +456,13 @@ public class AdDisplayActivity extends AppCompatActivity {
                     new AWSIotMqttNewMessageCallback() {
                         @Override
                         public void onMessageArrived(String topic, byte[] data) {
+
                             Log.d(TAG, "topic: " + topic);
                             String strPayload = new String(data, StandardCharsets.UTF_8);
                             Log.d(TAG, "Message: " + strPayload);
 
-
-                            try {
-                                JSONObject payloadData = new JSONObject(strPayload);
-                                String createdAt = payloadData.getString("createdAt");
-
-                                Log.d(TAG, "------------ Date: " + Helper.compareDate(createdAt));
-
-                                if (!Helper.compareDate(createdAt)) {
-                                    // Saving content to preference
-                                    contentPref.putString(ContentPreferences.CONTENT_DATA, strPayload);
-
-                                    Intent intent = new Intent(AdDisplayActivity.this, ContentDownloadIntentService.class);
-                                    intent.putExtra(ContentDownloadIntentService.CONTENT_DATA, strPayload);
-
-                                    startService(intent);
-                                    mediaLoop(Constants.MEDIALOOPSTATUS.STOP);
-                                } else {
-                                    runOnUiThread(new Runnable() {
-                                        @Override
-                                        public void run() {
-                                            Toast.makeText(context.getApplicationContext(), R.string.content_status_updated, Toast.LENGTH_LONG).show();
-                                        }
-                                    });
-                                }
-                            } catch (JSONException e) {
-                                e.printStackTrace();
-                            }
-
-
-//                            DownloadMediaTask downloadMediaTask = new DownloadMediaTask(aStr);
+                            DownloadThread downloadThread = new DownloadThread(strPayload);
+                            downloadThread.start();
                         }
                     });
             Log.d(TAG, "Subscribed to topic: " + topic);
@@ -448,6 +470,8 @@ public class AdDisplayActivity extends AppCompatActivity {
             Log.e(TAG, "Error in Subscribing to Topic.");
         }
     }
+
+
     // endregion
 
     // region Receiver
