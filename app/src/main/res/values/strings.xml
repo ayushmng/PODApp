@@ -11,4 +11,10 @@
     <string name="ok">OK</string>
     <string name="start_provisioning">Start Provisioning</string>
     <string name="_8000">8000</string>
+    <string name="connect">Connect</string>
+    <string name="ssid">SSID</string>
+    <string name="enter_password">Enter Password</string>
+    <string name="wi_fi_list">Wi-Fi List</string>
+    <string name="content_status_updated">Content is already updated</string>
+    <string name="device_details">Device Details</string>
 </resources>

@@ -16,21 +16,17 @@ import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.nfc.NfcAdapter;
-import android.os.AsyncTask;
 import android.os.Bundle;
-import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
-import android.view.WindowManager;
+import android.view.MotionEvent;
 import android.widget.ImageView;
 import android.widget.Toast;
 
 import com.amazonaws.mobileconnectors.iot.AWSIotMqttManager;
 import com.amazonaws.mobileconnectors.iot.AWSIotMqttNewMessageCallback;
 import com.amazonaws.mobileconnectors.iot.AWSIotMqttQos;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import com.nxp.nfclib.CardType;
 import com.nxp.nfclib.KeyType;
 import com.nxp.nfclib.NxpNfcLib;
@@ -39,17 +35,14 @@ import com.nxp.nfclib.desfire.DESFireFactory;
 import com.nxp.nfclib.desfire.IDESFireEV1;
 import com.nxp.nfclib.exceptions.NxpNfcLibException;
 import com.nxp.nfclib.interfaces.IKeyData;
-import com.nxp.nfclib.utils.Utilities;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.File;
-import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.Timer;
@@ -60,9 +53,7 @@ import np.com.bottle.podapp.ContentPreferences;
 import np.com.bottle.podapp.PODApp;
 import np.com.bottle.podapp.R;
 import np.com.bottle.podapp.adapter.MediaContentAdapter;
-import np.com.bottle.podapp.aws.AwsIotHelper;
 import np.com.bottle.podapp.fragment.NfcDetectFragment;
-import np.com.bottle.podapp.interfaces.ViewPagerPositionListener;
 import np.com.bottle.podapp.models.Media;
 import np.com.bottle.podapp.nfc.KeyInfoProvider;
 import np.com.bottle.podapp.nfc.NfcAppKeys;
@@ -77,6 +68,7 @@ public class AdDisplayActivity extends AppCompatActivity {
     private AppPreferences appPref;
     private ContentPreferences contentPref;
     PODApp appClass;
+    private long longPressTime;
 
     // NFC
     private NfcAdapter nfcAdapter;
@@ -87,30 +79,26 @@ public class AdDisplayActivity extends AppCompatActivity {
     private AWSIotMqttManager mqttManager;
 
     // MQTT Topics
-    private String TOPIC_DEVICE_URI;
     private final String TOPIC_CONTENT_RESPONSE = Constants.TOPIC_CONTENT_RESPONSE;
+    private final String TOPIC_CONTENT_REQUEST = Constants.TOPIC_CONTENT_REQUEST;
 
-    // Media Content
-    MediaThread mediaThread;
     private ViewPager mPager;
-    private ImageView mImageView;
     private static int currentPage = 0;
-    private static int currentPosition = 0;
     private static int NUM_PAGES = 0;
-    private boolean isEndMediaLoop = false;
     private ArrayList<Uri> ImagesArray = new ArrayList<>();
-//    private Uri[] IMAGES = {
-//            Uri.parse(getFilesDir().getAbsolutePath() + "/content/ncellimage.jpg"),
-////            Uri.parse(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES).getAbsolutePath() + "/car2.jpeg"),
-////            Uri.parse(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES).getAbsolutePath() + "/car3.jpeg")
-//    };
     private List<Media> mediaList;
     private MediaContentAdapter mediaContentAdapter;
+    private Timer mediaChangeTimer;
+    private int count = 0;
+    private String contentDate;
+
+    Context context;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_ad_display);
+        context = this;
 
 //        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
@@ -136,6 +124,7 @@ public class AdDisplayActivity extends AppCompatActivity {
             public void run() {
                 if (appClass.isAWSConnected) {
                     subscribeToContentResponse(TOPIC_CONTENT_RESPONSE);
+                    publishMsg(TOPIC_CONTENT_REQUEST, "");
                 }
             }
         };
@@ -149,18 +138,19 @@ public class AdDisplayActivity extends AppCompatActivity {
         super.onResume();
         libInstance.startForeGroundDispatch();
         registerReceiver(receiver, new IntentFilter(ContentDownloadIntentService.NOTIFICATION));
+        mediaLoop(Constants.MEDIALOOPSTATUS.START);
     }
 
     @Override
     protected void onPause() {
         super.onPause();
         unregisterReceiver(receiver);
+        mediaLoop(Constants.MEDIALOOPSTATUS.STOP);
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        isEndMediaLoop = true;
     }
 
     // region NFC Initialization
@@ -294,9 +284,6 @@ public class AdDisplayActivity extends AppCompatActivity {
         // Auto start of viewpager
 //        NUM_PAGES = ImagesArray.size();
         NUM_PAGES = mediaList.size();
-
-        mediaThread = new MediaThread(mPager);
-        mediaThread.start();
     }
 
     private void populateMedia(String contentData) {
@@ -305,6 +292,8 @@ public class AdDisplayActivity extends AppCompatActivity {
         try {
             JSONObject jPayload = new JSONObject(contentData);
             JSONArray jaData = jPayload.getJSONArray("data");
+
+            contentDate = jPayload.getString("createdAt");
 
             Log.d(TAG, "data: " + jPayload.getString("data"));
             Log.d(TAG, "array: " + jaData.getJSONObject(0));
@@ -343,59 +332,89 @@ public class AdDisplayActivity extends AppCompatActivity {
     }
 
     /**
-     * Thread for updating the ViewPager according to the image or video interval.
+     * Method to swipe the viewpager content automatically at the given interval of the contents.
+     * @param medialoopstatus enum to start or stop the media loop.
      */
-    private class MediaThread extends Thread {
-        int count;
-        ViewPager pager;
-        MediaThread(ViewPager pager) {
-            count = 0;
-            this.pager = pager;
+    private void mediaLoop(Constants.MEDIALOOPSTATUS medialoopstatus) {
+        switch (medialoopstatus) {
+            case START:
+                mediaChangeTimer = new Timer();
+
+                final Handler handler = new Handler(Looper.getMainLooper());
+                final Runnable Update = new Runnable() {
+                    public void run() {
+                        if (currentPage == NUM_PAGES - 1) {
+                            currentPage = 0;
+                        } else {
+                            currentPage++;
+                        }
+                        mPager.setCurrentItem(currentPage, true);
+                        Log.d(TAG, "currentPage: --- " + currentPage);
+                    }
+                };
+
+                mediaChangeTimer.schedule(new TimerTask() {
+                    @Override
+                    public void run() {
+                        count++;
+                        Log.d(TAG, "count: " + count);
+                        if (count >= mediaList.get(mPager.getCurrentItem()).Interval) {
+                            Log.d(TAG, "current page: " + mPager.getCurrentItem());
+                            Log.d(TAG, "current interval: " + mediaList.get(mPager.getCurrentItem()).Interval);
+
+                            handler.post(Update);
+
+                            count = 0;
+                        }
+                    }
+                }, 1000, 1000);
+                break;
+            case STOP:
+                mediaChangeTimer.cancel();
+                break;
+
+            default:
+                break;
+        }
+    }
+
+    class DownloadThread extends Thread {
+        String strPayload;
+
+        public DownloadThread(String strPayload) {
+            this.strPayload = strPayload;
         }
 
         public void run() {
-            Timer timer = new Timer();
-            timer.schedule(new TimerTask() {
-                @Override
-                public void run() {
-                    count++;
-                    Log.d(TAG, "count: " + count);
-                }
-            }, 1000, 1000);
-
-            final Handler handler = new Handler(Looper.getMainLooper());
-            final Runnable Update = new Runnable() {
-                public void run() {
-                    if (currentPage == NUM_PAGES - 1) {
-                        currentPage = 0;
-                    } else {
-                        currentPage++;
-                    }
-                    pager.setCurrentItem(currentPage, true);
-                    Log.d(TAG, "currentPage: --- " + currentPage);
-                }
-            };
-
             try {
-                while (!isEndMediaLoop) {
-                    if (count >= mediaList.get(pager.getCurrentItem()).Interval) {
-                        Log.d(TAG, "current page: " + pager.getCurrentItem());
-                        Log.d(TAG, "current interval: " + mediaList.get(pager.getCurrentItem()).Interval);
+                Log.d(TAG, "------------------ Message hereeeee");
+                JSONObject payloadData = new JSONObject(strPayload);
+                String createdAt = payloadData.getString("createdAt");
 
-                        handler.post(Update);
+                Log.d(TAG, "------------ Date: " + contentDate.equals(createdAt));
 
-                        count = 0;
-                    }
+//                                if (!Helper.compareDate(createdAt)) {
+                if (!Helper.compareDate(contentDate)) {
+                    // Saving content to preference
+                    contentPref.putString(ContentPreferences.CONTENT_DATA, strPayload);
 
+                    Intent intent = new Intent(AdDisplayActivity.this, ContentDownloadIntentService.class);
+                    intent.putExtra(ContentDownloadIntentService.CONTENT_DATA, strPayload);
+
+                    mediaLoop(Constants.MEDIALOOPSTATUS.STOP);
+                    startService(intent);
+                } else {
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            Toast.makeText(context.getApplicationContext(), R.string.content_status_updated, Toast.LENGTH_LONG).show();
+                        }
+                    });
                 }
-            } catch (Exception e) {
-                Log.e(TAG, "Thread Error: " + e.getMessage());
+            } catch (JSONException e) {
+                Log.e(TAG, "Error: " + e.getMessage());
             }
-
-            timer.cancel();
         }
-
-
     }
 
     // endregion
@@ -437,32 +456,13 @@ public class AdDisplayActivity extends AppCompatActivity {
                     new AWSIotMqttNewMessageCallback() {
                         @Override
                         public void onMessageArrived(String topic, byte[] data) {
+
                             Log.d(TAG, "topic: " + topic);
-                            String strData = new String(data, StandardCharsets.UTF_8);
-                            Log.d(TAG, "Message: " + strData);
+                            String strPayload = new String(data, StandardCharsets.UTF_8);
+                            Log.d(TAG, "Message: " + strPayload);
 
-
-                            try {
-                                JSONObject contentData = new JSONObject(strData);
-//                                String createdAt = contentData.getString("createdAt");
-
-//                                if (!Helper.compareDate(createdAt)) {
-                                if (true) {
-                                    // Saving content to preference
-                                    contentPref.putString(ContentPreferences.CONTENT_DATA, strData);
-
-                                    Intent intent = new Intent(AdDisplayActivity.this, ContentDownloadIntentService.class);
-                                    intent.putExtra(ContentDownloadIntentService.CONTENT_DATA, strData);
-
-                                    startService(intent);
-                                    isEndMediaLoop = true;
-                                }
-                            } catch (JSONException e) {
-                                e.printStackTrace();
-                            }
-
-
-//                            DownloadMediaTask downloadMediaTask = new DownloadMediaTask(aStr);
+                            DownloadThread downloadThread = new DownloadThread(strPayload);
+                            downloadThread.start();
                         }
                     });
             Log.d(TAG, "Subscribed to topic: " + topic);
@@ -470,6 +470,8 @@ public class AdDisplayActivity extends AppCompatActivity {
             Log.e(TAG, "Error in Subscribing to Topic.");
         }
     }
+
+
     // endregion
 
     // region Receiver
@@ -485,11 +487,7 @@ public class AdDisplayActivity extends AppCompatActivity {
                     Toast.makeText(AdDisplayActivity.this, "File downloaded.", Toast.LENGTH_SHORT).show();
                     populateMedia(contentPref.getString(ContentPreferences.CONTENT_DATA));
                     mediaContentAdapter.notifyDataSetChanged();
-
-
-                    isEndMediaLoop = false;
-                    mediaThread = new MediaThread(mPager);
-                    mediaThread.start();
+                    mediaLoop(Constants.MEDIALOOPSTATUS.START);
                 } else {
                     Toast.makeText(AdDisplayActivity.this, "File downloaded Error.", Toast.LENGTH_SHORT).show();
                 }
@@ -506,6 +504,24 @@ public class AdDisplayActivity extends AppCompatActivity {
     };
 
     // endregion
+
+    @Override
+    public boolean dispatchTouchEvent(MotionEvent event) {
+        switch (event.getAction()) {
+            case MotionEvent.ACTION_DOWN:
+                Log.d(TAG, "---------- ACTION_DOWN");
+                longPressTime = (Long) System.currentTimeMillis();
+                break;
+            case MotionEvent.ACTION_UP:
+                if(((Long) System.currentTimeMillis() - longPressTime) > 3000){
+                    Log.d(TAG, "------------------------------ ACTION_UP");
+                    startActivity(new Intent(getApplicationContext(), SettingsActivity.class));
+                    return true;
+                }
+                break;
+        }
+        return super.dispatchTouchEvent(event);
+    }
 
     // region Permission
     private void checkPermission() {
