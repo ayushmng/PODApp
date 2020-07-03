@@ -21,7 +21,6 @@ import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 import android.view.MotionEvent;
-import android.widget.ImageView;
 import android.widget.Toast;
 
 import com.amazonaws.mobileconnectors.iot.AWSIotMqttManager;
@@ -79,8 +78,8 @@ public class AdDisplayActivity extends AppCompatActivity {
     private AWSIotMqttManager mqttManager;
 
     // MQTT Topics
-    private final String TOPIC_CONTENT_RESPONSE = Constants.TOPIC_CONTENT_RESPONSE;
-    private final String TOPIC_CONTENT_REQUEST = Constants.TOPIC_CONTENT_REQUEST;
+    private final String TOPIC_CONTENT_RESPONSE = Constants.TOPIC_CONTENT_SUB;
+    private final String TOPIC_CONTENT_REQUEST = Constants.TOPIC_CONTENT_PUB;
 
     private ViewPager mPager;
     private static int currentPage = 0;
@@ -88,9 +87,14 @@ public class AdDisplayActivity extends AppCompatActivity {
     private ArrayList<Uri> ImagesArray = new ArrayList<>();
     private List<Media> mediaList;
     private MediaContentAdapter mediaContentAdapter;
-    private Timer mediaChangeTimer;
+    private Timer mediaChangeTimer = new Timer();;
     private int count = 0;
-    private String contentDate;
+
+    /*
+     * Initialize content date so as to not make it null.
+     * Initial value of contentDate is random date. It has no use.
+     */
+    private String contentDate = "1970-1-1";
 
     Context context;
 
@@ -110,7 +114,6 @@ public class AdDisplayActivity extends AppCompatActivity {
 
         mPager = findViewById(R.id.vpAdContent);
 
-        checkPermission();
         checkDirectory();
         initializedLibrary();
         initializeKeys();
@@ -241,7 +244,7 @@ public class AdDisplayActivity extends AppCompatActivity {
             String payload = paymentPayload.toString();
             Log.d(TAG, "paymentPayload: " + payload);
 
-            publishMsg(Constants.TOPIC_NFC_PAYMENT, payload);
+            publishMsg(Constants.TOPIC_NFC_PAYMENT_PUB, payload);
             showPaymentDialog(strName, strCardNumber);
         } catch (Exception e) {
             Log.e(TAG, "Auth Fail");
@@ -338,36 +341,38 @@ public class AdDisplayActivity extends AppCompatActivity {
     private void mediaLoop(Constants.MEDIALOOPSTATUS medialoopstatus) {
         switch (medialoopstatus) {
             case START:
-                mediaChangeTimer = new Timer();
+                if (NUM_PAGES > 0) {
+                    mediaChangeTimer = new Timer();
 
-                final Handler handler = new Handler(Looper.getMainLooper());
-                final Runnable Update = new Runnable() {
-                    public void run() {
-                        if (currentPage == NUM_PAGES - 1) {
-                            currentPage = 0;
-                        } else {
-                            currentPage++;
+                    final Handler handler = new Handler(Looper.getMainLooper());
+                    final Runnable Update = new Runnable() {
+                        public void run() {
+                            if (currentPage == NUM_PAGES - 1) {
+                                currentPage = 0;
+                            } else {
+                                currentPage++;
+                            }
+                            mPager.setCurrentItem(currentPage, true);
+                            Log.d(TAG, "currentPage: --- " + currentPage);
                         }
-                        mPager.setCurrentItem(currentPage, true);
-                        Log.d(TAG, "currentPage: --- " + currentPage);
-                    }
-                };
+                    };
 
-                mediaChangeTimer.schedule(new TimerTask() {
-                    @Override
-                    public void run() {
-                        count++;
-                        Log.d(TAG, "count: " + count);
-                        if (count >= mediaList.get(mPager.getCurrentItem()).Interval) {
-                            Log.d(TAG, "current page: " + mPager.getCurrentItem());
-                            Log.d(TAG, "current interval: " + mediaList.get(mPager.getCurrentItem()).Interval);
+                    mediaChangeTimer.schedule(new TimerTask() {
+                        @Override
+                        public void run() {
+                            count++;
+                            Log.d(TAG, "count: " + count);
+                            if (count >= mediaList.get(mPager.getCurrentItem()).Interval) {
+                                Log.d(TAG, "current page: " + mPager.getCurrentItem());
+                                Log.d(TAG, "current interval: " + mediaList.get(mPager.getCurrentItem()).Interval);
 
-                            handler.post(Update);
+                                handler.post(Update);
 
-                            count = 0;
+                                count = 0;
+                            }
                         }
-                    }
-                }, 1000, 1000);
+                    }, 1000, 1000);
+                }
                 break;
             case STOP:
                 mediaChangeTimer.cancel();
@@ -391,10 +396,10 @@ public class AdDisplayActivity extends AppCompatActivity {
                 JSONObject payloadData = new JSONObject(strPayload);
                 String createdAt = payloadData.getString("createdAt");
 
-                Log.d(TAG, "------------ Date: " + contentDate.equals(createdAt));
+//                Log.d(TAG, "------------ Date: " + contentDate.equals(createdAt));
 
 //                                if (!Helper.compareDate(createdAt)) {
-                if (!Helper.compareDate(contentDate)) {
+                if (!Helper.compareDate(contentDate) || contentDate == null) {
                     // Saving content to preference
                     contentPref.putString(ContentPreferences.CONTENT_DATA, strPayload);
 
@@ -412,7 +417,7 @@ public class AdDisplayActivity extends AppCompatActivity {
                     });
                 }
             } catch (JSONException e) {
-                Log.e(TAG, "Error: " + e.getMessage());
+                Log.e(TAG, "JSONException: " + e.getMessage());
             }
         }
     }
@@ -438,10 +443,10 @@ public class AdDisplayActivity extends AppCompatActivity {
                             String strData = new String(data, StandardCharsets.UTF_8);
                             Log.d(TAG, "Message: " + strData);
 
-                            switch (topic) {
-                                case TOPIC_CONTENT_RESPONSE:
-                                    break;
-                            }
+//                            switch (topic) {
+//                                case TOPIC_CONTENT_RESPONSE:
+//                                    break;
+//                            }
                         }
                     });
             Log.d(TAG, "Subscribed to topic: " + topic);
@@ -522,35 +527,4 @@ public class AdDisplayActivity extends AppCompatActivity {
         }
         return super.dispatchTouchEvent(event);
     }
-
-    // region Permission
-    private void checkPermission() {
-        if(ContextCompat.checkSelfPermission(this, Manifest.permission.NFC) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.NFC}, Helper.RESULT_REQUEST_NFC);
-        }
-
-        if(ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, new String[] {Manifest.permission.WRITE_EXTERNAL_STORAGE}, Helper.RESULT_REQUEST_EXTERNAL_STORAGE);
-        }
-    }
-
-    @Override
-    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        switch (requestCode) {
-            case Helper.RESULT_REQUEST_NFC:
-                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    Toast.makeText(this, "Requested Permission Granted", Toast.LENGTH_SHORT).show();
-                } else {
-                    Toast.makeText(this, "This app was not allowed to use NFC", Toast.LENGTH_SHORT).show();
-                }
-            case Helper.RESULT_REQUEST_EXTERNAL_STORAGE:
-                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    Toast.makeText(this, "Requested Permission Granted", Toast.LENGTH_SHORT).show();
-                } else {
-                    Toast.makeText(this, "This app was not allowed to use External Storage", Toast.LENGTH_SHORT).show();
-                }
-        }
-    }
-    // endregion
 }

@@ -8,18 +8,20 @@ public class AppPreferences {
     private final String APP_PREFERENCES_FILE_NAME = "aws_credential";
 
     public final static String CUSTOMER_SPECIFIC_ENDPOINT_ARN = "endpoint_arn";
-    public final static String CLIENT_ID = "client_id";
 
-    public final static String DEVICE_NAME = "device_name";
-    public final static String DEVICE_ID = "device_id";
-    public final static String ACTIVATION_TOKEN = "activation_token";
+    public final static String DEVICE_NAME = "name";
+    public final static String DEVICE_ID = "deviceId";
+    public final static String ACTIVATION_CODE = "activationCode";
     public final static String DEVICE_URI = "device_uri";
-    public final static String FLEET_ID = "fleet_id";
-    public final static String MQTT_HOST = "mqtt_host";
+    public final static String FLEET_ID = "fleetId";
+    public final static String MQTT_HOST = "host";
+    public final static String GROUP_ID = "groupId";
+    public final static String ORGANISATION_ID = "orgId";
+    public final static String CLIENT_ID = "clientId";
 
-    public final static String AWS_IOT_CERTIFICATE = "iot_certificate";
-    public final static String AWS_IOT_PRIVATE_KEY = "iot_private_key";
-    public final static String AWS_IOT_PUBLIC_KEY = "iot_public_key";
+    public final static String AWS_IOT_CERTIFICATE = "Certificate";
+    public final static String AWS_IOT_PRIVATE_KEY = "Private";
+    public final static String AWS_IOT_PUBLIC_KEY = "Public";
     public final static String IS_PROVISIONED = "provision_status";
 
     public AppPreferences(Context context) {

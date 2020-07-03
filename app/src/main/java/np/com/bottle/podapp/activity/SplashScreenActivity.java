@@ -8,18 +8,28 @@ import android.Manifest;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
+import android.util.Log;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.Toast;
 
+import java.lang.reflect.Array;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+
+import javax.security.auth.callback.PasswordCallback;
+
 import np.com.bottle.podapp.AppPreferences;
 import np.com.bottle.podapp.R;
+import np.com.bottle.podapp.util.Constants;
 import np.com.bottle.podapp.util.Helper;
 
 public class SplashScreenActivity extends AppCompatActivity {
 
     private static String TAG = SplashScreenActivity.class.getSimpleName();
     private AppPreferences appPref;
+    private List<String> appPermissions;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -28,74 +38,78 @@ public class SplashScreenActivity extends AppCompatActivity {
 
         ImageView ivLogo = findViewById(R.id.ivLogo);
 
-        checkPermission();
+        appPermissions = new ArrayList<>();
+        appPermissions.add(Manifest.permission.NFC);
+        appPermissions.add(Manifest.permission.WRITE_EXTERNAL_STORAGE);
+        appPermissions.add(Manifest.permission.ACCESS_WIFI_STATE);
+        appPermissions.add(Manifest.permission.CHANGE_WIFI_STATE);
+        appPermissions.add(Manifest.permission.ACCESS_FINE_LOCATION);
+
         appPref = new AppPreferences(getApplicationContext());
 
-        ivLogo.postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                if(appPref.getBoolean(AppPreferences.IS_PROVISIONED)) {
-                    startActivity(new Intent(getApplicationContext(), AdDisplayActivity.class));
-//                    startActivity(new Intent(getApplicationContext(), SettingsActivity.class));
-                    finish();
-                } else {
-                    startActivity(new Intent(getApplicationContext(), ProvisioningActivity.class));
+        if(checkPermission()) {
+            ivLogo.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    initApp();
                     finish();
                 }
-            }
-        }, 2000);
+            }, 2000);
+        }
+
     }
 
-    private void checkPermission() {
-        if(ContextCompat.checkSelfPermission(this, Manifest.permission.NFC) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.NFC}, Helper.RESULT_REQUEST_NFC);
+    public void initApp() {
+        if (appPref.getBoolean(AppPreferences.IS_PROVISIONED)) {
+            startActivity(new Intent(getApplicationContext(), AdDisplayActivity.class));
+        } else {
+            startActivity(new Intent(getApplicationContext(), ProvisioningActivity.class));
+        }
+        finish();
+    }
+
+    private boolean checkPermission() {
+
+        List<String> listPermissionsNeeded = new ArrayList<>();
+        for (String perm : appPermissions) {
+            if(ContextCompat.checkSelfPermission(this, perm) != PackageManager.PERMISSION_GRANTED) {
+                listPermissionsNeeded.add(perm);
+            }
         }
 
-        if(ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, new String[] {Manifest.permission.WRITE_EXTERNAL_STORAGE}, Helper.RESULT_REQUEST_EXTERNAL_STORAGE);
+        if(!listPermissionsNeeded.isEmpty()) {
+            ActivityCompat.requestPermissions(this,
+                    listPermissionsNeeded.toArray(new String[listPermissionsNeeded.size()]),
+                    Constants.PERMISSIONS_REQUEST_CODE
+            );
+            return false;
         }
 
-        if(ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_WIFI_STATE) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, new String[] {Manifest.permission.ACCESS_WIFI_STATE}, Helper.REQUEST_CODE_ACCESS_WIFI_STATE);
-        }
-
-        if(ContextCompat.checkSelfPermission(this, Manifest.permission.CHANGE_WIFI_STATE) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, new String[] {Manifest.permission.CHANGE_WIFI_STATE}, Helper.REQUEST_CODE_CHANGE_WIFI_STATE);
-        }
-
-        if(ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, new String[] {Manifest.permission.ACCESS_FINE_LOCATION}, Helper.REQUEST_CODE_ACCESS_FINE_LOCATION);
-        }
+        return true;
     }
 
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        switch (requestCode) {
-            case Helper.RESULT_REQUEST_NFC:
-                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    Toast.makeText(this, "Requested Permission Granted", Toast.LENGTH_SHORT).show();
-                } else {
-                    Toast.makeText(this, "This app was not allowed to use NFC", Toast.LENGTH_SHORT).show();
+        Log.d(TAG, "here ------------------ ");
+        Log.d(TAG, "permissions: " + permissions.length);
+        Log.d(TAG, "grantResults: " + grantResults.length);
+
+        if(requestCode == Constants.PERMISSIONS_REQUEST_CODE) {
+            HashMap<String, Integer> permissionResults = new HashMap<>();
+            int deniedCount = 0;
+
+            for(int i = 0; i < grantResults.length; i++) {
+                if(grantResults[i] == PackageManager.PERMISSION_DENIED) {
+                    permissionResults.put(permissions[i], grantResults[i]);
+                    deniedCount++;
                 }
-            case Helper.RESULT_REQUEST_EXTERNAL_STORAGE:
-                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    Toast.makeText(this, "Requested Permission Granted", Toast.LENGTH_SHORT).show();
-                } else {
-                    Toast.makeText(this, "This app was not allowed to use External Storage", Toast.LENGTH_SHORT).show();
-                }
-            case Helper.REQUEST_CODE_CHANGE_WIFI_STATE:
-                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    Toast.makeText(this, "Requested Permission Granted", Toast.LENGTH_SHORT).show();
-                } else {
-                    Toast.makeText(this, "This app was not allowed to access Change WiFi State", Toast.LENGTH_SHORT).show();
-                }
-            case Helper.REQUEST_CODE_ACCESS_FINE_LOCATION:
-                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    Toast.makeText(this, "Requested Permission Granted", Toast.LENGTH_SHORT).show();
-                } else {
-                    Toast.makeText(this, "This app was not allowed to use Fine Location", Toast.LENGTH_SHORT).show();
-                }
+            }
+
+            if(deniedCount == 0) {
+                initApp();
+            }
+            finish();
         }
     }
 }

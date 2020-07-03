@@ -9,7 +9,6 @@ import androidx.recyclerview.widget.RecyclerView;
 import android.Manifest;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.nfc.Tag;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -21,9 +20,6 @@ import com.amazonaws.mobileconnectors.iot.AWSIotMqttClientStatusCallback;
 import com.amazonaws.mobileconnectors.iot.AWSIotMqttManager;
 import com.amazonaws.mobileconnectors.iot.AWSIotMqttNewMessageCallback;
 import com.amazonaws.mobileconnectors.iot.AWSIotMqttQos;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonSyntaxException;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -34,6 +30,7 @@ import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyStore;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.List;
 
 import np.com.bottle.podapp.AppPreferences;
@@ -117,17 +114,9 @@ public class ProvisioningActivity extends AppCompatActivity implements Websocket
         Log.d(TAG, "onAwsConfigReceived: " + configData);
 
         try {
-            JSONObject data = new JSONObject(configData);
+            JSONObject payload = new JSONObject(configData);
+            JSONObject data = payload.getJSONObject("dataToSend");
             saveAwsConfigData(data);
-            String strCert = downloadFile(data.getString("certificate_url"));
-            String strPrivateKey = downloadFile(data.getString("privateKey_url"));
-            String strPublicKey = downloadFile(data.getString("publicKey_url"));
-            String keystorePath = getFilesDir().getPath();
-            String endpoint = appPref.getString(AppPreferences.MQTT_HOST);
-            AwsIotHelper.saveConfiguration(endpoint, Constants.CERTIFICATE_ID, strCert, strPrivateKey, strPublicKey, keystorePath);
-            Log.d(TAG, "aws key saved.");
-
-            connectToAws();
         } catch (JSONException e) {
             Log.e(TAG, "JSONException: " + e.getMessage());
         }
@@ -158,12 +147,36 @@ public class ProvisioningActivity extends AppCompatActivity implements Websocket
      * Saves the AWS config data into shared preferences.
      */
     public void saveAwsConfigData(JSONObject data) throws JSONException {
-        appPref.putString(AppPreferences.DEVICE_NAME, data.getString("name"));
-        appPref.putString(AppPreferences.DEVICE_ID, data.getString("device_id"));
-        appPref.putString(AppPreferences.ACTIVATION_TOKEN, data.getString("activation"));
-        appPref.putString(AppPreferences.DEVICE_URI, data.getString("device_uri"));
-        appPref.putString(AppPreferences.FLEET_ID, data.getString("fleet_id"));
-        appPref.putString(AppPreferences.MQTT_HOST, data.getString("mqtt_host"));
+
+        try {
+            JSONObject certificates = data.getJSONObject("certificate");
+            String strCert = downloadFile(certificates.getString(AppPreferences.AWS_IOT_CERTIFICATE));
+            String strPrivateKey = downloadFile(certificates.getString(AppPreferences.AWS_IOT_PRIVATE_KEY));
+            String strPublicKey = downloadFile(certificates.getString(AppPreferences.AWS_IOT_PUBLIC_KEY));
+            String keystorePath = getFilesDir().getPath();
+            String endpoint = appPref.getString(AppPreferences.MQTT_HOST);
+            AwsIotHelper.saveConfiguration(endpoint, Constants.CERTIFICATE_ID, strCert, strPrivateKey, strPublicKey, keystorePath);
+            Log.d(TAG, "aws key saved.");
+        } catch (Exception e) {
+            Log.e(TAG, "Error in downloading and saving aws iot cert files.");
+            Log.e(TAG, "Exception: " + e.getMessage());
+        }
+
+        Log.d(TAG, "Device ID: " + data.getString(AppPreferences.DEVICE_ID));
+
+
+
+        appPref.putString(AppPreferences.ACTIVATION_CODE, data.getString(AppPreferences.ACTIVATION_CODE));
+        appPref.putString(AppPreferences.FLEET_ID, data.getString(AppPreferences.FLEET_ID));
+        appPref.putString(AppPreferences.ORGANISATION_ID, data.getString(AppPreferences.ORGANISATION_ID));
+        appPref.putString(AppPreferences.GROUP_ID, data.getString(AppPreferences.GROUP_ID));
+        appPref.putString(AppPreferences.DEVICE_NAME, data.getString(AppPreferences.DEVICE_NAME));
+        appPref.putString(AppPreferences.MQTT_HOST, data.getString(AppPreferences.MQTT_HOST));
+        appPref.putString(AppPreferences.DEVICE_ID, data.getString(AppPreferences.DEVICE_ID));
+        appPref.putString(AppPreferences.CLIENT_ID, data.getString(AppPreferences.CLIENT_ID));
+//        appPref.putString(AppPreferences.DEVICE_URI, data.getString("device_uri"));
+
+        connectToAws();
 
         populateData();
         rvAdapter.notifyDataSetChanged();
@@ -180,8 +193,8 @@ public class ProvisioningActivity extends AppCompatActivity implements Websocket
         rvDataList.clear();
         rvDataList.add(new DataList(AppPreferences.DEVICE_NAME, appPref.getString(AppPreferences.DEVICE_NAME)));
         rvDataList.add(new DataList(AppPreferences.DEVICE_ID, appPref.getString(AppPreferences.DEVICE_ID)));
-        rvDataList.add(new DataList(AppPreferences.ACTIVATION_TOKEN, appPref.getString(AppPreferences.ACTIVATION_TOKEN)));
-        rvDataList.add(new DataList(AppPreferences.DEVICE_URI, appPref.getString(AppPreferences.DEVICE_URI)));
+        rvDataList.add(new DataList(AppPreferences.ACTIVATION_CODE, appPref.getString(AppPreferences.ACTIVATION_CODE)));
+//        rvDataList.add(new DataList(AppPreferences.DEVICE_URI, appPref.getString(AppPreferences.DEVICE_URI)));
         rvDataList.add(new DataList(AppPreferences.FLEET_ID, appPref.getString(AppPreferences.FLEET_ID)));
         rvDataList.add(new DataList(AppPreferences.MQTT_HOST, appPref.getString(AppPreferences.MQTT_HOST)));
     }
@@ -207,11 +220,13 @@ public class ProvisioningActivity extends AppCompatActivity implements Websocket
 
     private void connectToAws() {
         try {
+            Constants.constructTopic(appPref.getString(AppPreferences.ORGANISATION_ID), appPref.getString(AppPreferences.DEVICE_ID));
+
             String keystorePath = getFilesDir().getPath();
-            clientId = appPref.getString(AppPreferences.DEVICE_NAME) + "_" + appPref.getString(AppPreferences.DEVICE_ID);
+            clientId = appPref.getString(AppPreferences.CLIENT_ID);
             Log.d(TAG, "client id: " + clientId);
             Log.d(TAG, "endpoint: " + appPref.getString(AppPreferences.MQTT_HOST));
-            Log.d(TAG, "Sug topic = " + Constants.TOPIC_ACTIVATE + "_" + appPref.getString(AppPreferences.DEVICE_ID));
+            Log.d(TAG, "Sug topic = " + Constants.TOPIC_ACTIVATE_PUB );
 
             mqttManager = new AWSIotMqttManager(clientId, appPref.getString(AppPreferences.MQTT_HOST));
             mqttManager.setKeepAlive(10);
@@ -234,23 +249,42 @@ public class ProvisioningActivity extends AppCompatActivity implements Websocket
     // Creation of activation payload.
     // Calls publishMsg() method.
     private void activateDevice() {
-        JSONObject json = new JSONObject();
+        JSONObject activationPayload = new JSONObject();
         try {
-            json.put("type", "activate");
-            json.put("activationCode", appPref.getString(AppPreferences.ACTIVATION_TOKEN));
+//            activationPayload.put("type", "activate");
+//            activationPayload.put("activationCode", appPref.getString(AppPreferences.ACTIVATION_TOKEN));
+            JSONObject essentialPayload = new JSONObject();
+            essentialPayload.put("deviceID", appPref.getString(AppPreferences.DEVICE_ID));
+            essentialPayload.put("payloadType", "activationack");
+
+            JSONObject payload = new JSONObject();
+            payload.put("action", "activate");
+            payload.put("activationCode", appPref.getString(AppPreferences.ACTIVATION_CODE));
+            payload.put("time", Calendar.getInstance().getTime());
+            payload.put("txnId", Math.random());
+            payload.put("flashID", "");
+            payload.put("macAddress", "");
+            payload.put("androidName", "");
+
+            essentialPayload.put("payload", payload);
+            activationPayload.put("essential", essentialPayload);
+
+            Log.d(TAG, "activationPayload: " + activationPayload.toString());
         } catch (Exception e) {
             Log.e(TAG, "Error in creating json object.");
         }
 
-        publishMsg(json.toString());
+        publishMsg(activationPayload.toString());
     }
 
     // Publish activation message to the activation topic.
     // QOS 1 is being used for mqtt.
     private void publishMsg(String payload) {
-        subscribe(Constants.TOPIC_ACTIVATE + "_" + appPref.getString(AppPreferences.DEVICE_ID));
+        Log.d(TAG, "Constants.TOPIC_TELEMETRY_SUB ----- " + Constants.TOPIC_TELEMETRY_SUB);
+        Log.d(TAG, "Constants.TOPIC_ACTIVATE_PUB ----- " + Constants.TOPIC_ACTIVATE_PUB);
+        subscribe(Constants.TOPIC_TELEMETRY_SUB);
 
-        String topic = Constants.TOPIC_ACTIVATE;
+        String topic = Constants.TOPIC_ACTIVATE_PUB;
         mqttManager.publishString(payload, topic, AWSIotMqttQos.QOS1);
         Log.d(TAG, "Activation Message Sent");
     }
@@ -261,12 +295,15 @@ public class ProvisioningActivity extends AppCompatActivity implements Websocket
                     new AWSIotMqttNewMessageCallback() {
                         @Override
                         public void onMessageArrived(String topic, byte[] data) {
-                            Log.d(TAG, "here sub");
                             String strData = new String(data, StandardCharsets.UTF_8);
-                            JSONObject json = null;
+                            Log.d(TAG, "topic sub: " + topic);
+                            Log.d(TAG, "activation sub: " + strData);
+                            JSONObject activationPayload = null;
                             try {
-                                json = new JSONObject(strData);
-                                if(json.getString("deviceId").equals(appPref.getString(AppPreferences.DEVICE_ID))) {
+                                activationPayload = new JSONObject(strData);
+                                JSONObject essentialPayload = activationPayload.getJSONObject("essential");
+
+                                if(essentialPayload.getString("deviceID").equals(appPref.getString(AppPreferences.DEVICE_ID))) {
                                     appPref.putBoolean(AppPreferences.IS_PROVISIONED, true);
                                     startActivity(new Intent(getApplicationContext(), AdDisplayActivity.class));
                                     finish();
@@ -279,12 +316,15 @@ public class ProvisioningActivity extends AppCompatActivity implements Websocket
                     });
         } catch (Exception e) {
             Log.e(TAG, "Error in Subscribing to Topic.");
+            Log.e(TAG, "Error: " + e.getMessage());
+
         }
     }
 
     private View.OnClickListener btnProvisionListener = new View.OnClickListener() {
         @Override
         public void onClick(View view) {
+
             connectToAws();
         }
     };

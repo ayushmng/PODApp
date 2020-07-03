@@ -121,8 +121,8 @@ public class SettingsActivity extends AppCompatActivity implements OnItemClickLi
         deviceDetailList.clear();
         deviceDetailList.add(new DataList(AppPreferences.DEVICE_NAME, appPref.getString(AppPreferences.DEVICE_NAME)));
         deviceDetailList.add(new DataList(AppPreferences.DEVICE_ID, appPref.getString(AppPreferences.DEVICE_ID)));
-        deviceDetailList.add(new DataList(AppPreferences.ACTIVATION_TOKEN, appPref.getString(AppPreferences.ACTIVATION_TOKEN)));
-        deviceDetailList.add(new DataList(AppPreferences.DEVICE_URI, appPref.getString(AppPreferences.DEVICE_URI)));
+        deviceDetailList.add(new DataList(AppPreferences.ACTIVATION_CODE, appPref.getString(AppPreferences.ACTIVATION_CODE)));
+//        deviceDetailList.add(new DataList(AppPreferences.DEVICE_URI, appPref.getString(AppPreferences.DEVICE_URI)));
         deviceDetailList.add(new DataList(AppPreferences.FLEET_ID, appPref.getString(AppPreferences.FLEET_ID)));
         deviceDetailList.add(new DataList(AppPreferences.MQTT_HOST, appPref.getString(AppPreferences.MQTT_HOST)));
     }
