@@ -5,7 +5,6 @@
     <string name="port">Port</string>
     <string name="sample_text">Sample Text</string>
 
-    <!-- TODO: Remove or change this placeholder text -->
     <string name="hello_blank_fragment">Hello blank fragment</string>
     <string name="payment">Payment</string>
     <string name="ok">OK</string>
@@ -17,4 +16,6 @@
     <string name="wi_fi_list">Wi-Fi List</string>
     <string name="content_status_updated">Content is already updated</string>
     <string name="device_details">Device Details</string>
+    <string name="kiosk_mode">KIOSK Mode</string>
+    <string name="clear_content">Clear Content</string>
 </resources>

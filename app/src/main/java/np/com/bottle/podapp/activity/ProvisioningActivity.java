@@ -115,7 +115,7 @@ public class ProvisioningActivity extends AppCompatActivity implements Websocket
 
         try {
             JSONObject payload = new JSONObject(configData);
-            JSONObject data = payload.getJSONObject("dataToSend");
+            JSONObject data = payload.getJSONObject("data");
             saveAwsConfigData(data);
         } catch (JSONException e) {
             Log.e(TAG, "JSONException: " + e.getMessage());
@@ -174,6 +174,8 @@ public class ProvisioningActivity extends AppCompatActivity implements Websocket
         appPref.putString(AppPreferences.MQTT_HOST, data.getString(AppPreferences.MQTT_HOST));
         appPref.putString(AppPreferences.DEVICE_ID, data.getString(AppPreferences.DEVICE_ID));
         appPref.putString(AppPreferences.CLIENT_ID, data.getString(AppPreferences.CLIENT_ID));
+        appPref.putString(AppPreferences.ANDROID_NAME, data.getString(AppPreferences.ANDROID_NAME));
+
 //        appPref.putString(AppPreferences.DEVICE_URI, data.getString("device_uri"));
 
         connectToAws();
@@ -194,7 +196,7 @@ public class ProvisioningActivity extends AppCompatActivity implements Websocket
         rvDataList.add(new DataList(AppPreferences.DEVICE_NAME, appPref.getString(AppPreferences.DEVICE_NAME)));
         rvDataList.add(new DataList(AppPreferences.DEVICE_ID, appPref.getString(AppPreferences.DEVICE_ID)));
         rvDataList.add(new DataList(AppPreferences.ACTIVATION_CODE, appPref.getString(AppPreferences.ACTIVATION_CODE)));
-//        rvDataList.add(new DataList(AppPreferences.DEVICE_URI, appPref.getString(AppPreferences.DEVICE_URI)));
+        rvDataList.add(new DataList(AppPreferences.ANDROID_NAME, appPref.getString(AppPreferences.ANDROID_NAME)));
         rvDataList.add(new DataList(AppPreferences.FLEET_ID, appPref.getString(AppPreferences.FLEET_ID)));
         rvDataList.add(new DataList(AppPreferences.MQTT_HOST, appPref.getString(AppPreferences.MQTT_HOST)));
     }
@@ -264,7 +266,7 @@ public class ProvisioningActivity extends AppCompatActivity implements Websocket
             payload.put("txnId", Math.random());
             payload.put("flashID", "");
             payload.put("macAddress", "");
-            payload.put("androidName", "");
+            payload.put("androidName", appPref.getString(AppPreferences.ANDROID_NAME));
 
             essentialPayload.put("payload", payload);
             activationPayload.put("essential", essentialPayload);

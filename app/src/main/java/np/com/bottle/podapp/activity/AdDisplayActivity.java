@@ -1,24 +1,23 @@
 package np.com.bottle.podapp.activity;
 
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
 import androidx.fragment.app.DialogFragment;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentTransaction;
 import androidx.viewpager.widget.ViewPager;
 
-import android.Manifest;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.pm.PackageManager;
 import android.net.Uri;
+import android.net.wifi.WifiInfo;
+import android.net.wifi.WifiManager;
 import android.nfc.NfcAdapter;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.StrictMode;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.widget.Toast;
@@ -35,15 +34,18 @@ import com.nxp.nfclib.desfire.IDESFireEV1;
 import com.nxp.nfclib.exceptions.NxpNfcLibException;
 import com.nxp.nfclib.interfaces.IKeyData;
 
+import org.jetbrains.annotations.NotNull;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Random;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -66,8 +68,9 @@ public class AdDisplayActivity extends AppCompatActivity {
     private static String TAG = AdDisplayActivity.class.getSimpleName();
     private AppPreferences appPref;
     private ContentPreferences contentPref;
-    PODApp appClass;
+    private PODApp appClass;
     private long longPressTime;
+    private Context context;
 
     // NFC
     private NfcAdapter nfcAdapter;
@@ -96,7 +99,8 @@ public class AdDisplayActivity extends AppCompatActivity {
      */
     private String contentDate = "1970-1-1";
 
-    Context context;
+    // Device Health
+    Timer healthTimer = new Timer();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -109,6 +113,7 @@ public class AdDisplayActivity extends AppCompatActivity {
         appPref = new AppPreferences(getApplicationContext());
         contentPref = new ContentPreferences(getApplicationContext());
         appClass = (PODApp) getApplication();
+        mqttManager = appClass.getMqttManager();
 
         mediaList = new ArrayList<>();
 
@@ -118,22 +123,7 @@ public class AdDisplayActivity extends AppCompatActivity {
         initializedLibrary();
         initializeKeys();
         initializeMedia();
-
-        mqttManager = appClass.getMqttManager();
-
-        Timer timer = new Timer();
-        TimerTask subscribeTask = new TimerTask() {
-            @Override
-            public void run() {
-                if (appClass.isAWSConnected) {
-                    subscribeToContentResponse(TOPIC_CONTENT_RESPONSE);
-                    publishMsg(TOPIC_CONTENT_REQUEST, "");
-                }
-            }
-        };
-        timer.schedule(subscribeTask, 3000);
-
-
+        deviceMetrics();
     }
 
     @Override
@@ -149,6 +139,7 @@ public class AdDisplayActivity extends AppCompatActivity {
         super.onPause();
         unregisterReceiver(receiver);
         mediaLoop(Constants.MEDIALOOPSTATUS.STOP);
+        healthTimer.cancel();
     }
 
     @Override
@@ -172,10 +163,10 @@ public class AdDisplayActivity extends AppCompatActivity {
 
     private void initializeKeys() {
         KeyInfoProvider infoProvider = KeyInfoProvider.getInstance(getApplicationContext());
-        infoProvider.setKey(Helper.ALIAS_KEY_AES128, NfcAppKeys.EnumKeyType.EnumAESKey, NfcAppKeys.KEY_AES128_AllAccess);
+        infoProvider.setKey(Constants.ALIAS_KEY_AES128, NfcAppKeys.EnumKeyType.EnumAESKey, NfcAppKeys.KEY_AES128_AllAccess);
 
         KeyData keyDataObj = new KeyData();
-        objKEY_AES128 = infoProvider.getKey(Helper.ALIAS_KEY_AES128,
+        objKEY_AES128 = infoProvider.getKey(Constants.ALIAS_KEY_AES128,
                 NfcAppKeys.EnumKeyType.EnumAESKey);
     }
 
@@ -273,8 +264,24 @@ public class AdDisplayActivity extends AppCompatActivity {
 
     // region Content Media
     private void initializeMedia() {
-//        ImagesArray.addAll(Arrays.asList(IMAGES));
+        // Subscription to Ad Content topic.
+        // Initial request for today's Ad Contents.
+        // Runs only once on activity start.
+        Timer timer = new Timer();
+        TimerTask subscribeTask = new TimerTask() {
+            @Override
+            public void run() {
+                if (appClass.isAWSConnected) {
+                    subscribeToContentResponse(TOPIC_CONTENT_RESPONSE);
+                    publishMsg(TOPIC_CONTENT_REQUEST, "");
+                }
+            }
+        };
+        timer.schedule(subscribeTask, 3000);
+
+        // Only for debugging purpose.
         Helper.fileCount(getFilesDir().getAbsolutePath() + "/content");
+
         populateMedia(contentPref.getString(ContentPreferences.CONTENT_DATA));
 
         Log.d(TAG, "----- content data: " + contentPref.getString(ContentPreferences.CONTENT_DATA));
@@ -283,9 +290,6 @@ public class AdDisplayActivity extends AppCompatActivity {
         ImagesArray.add(Uri.parse(getFilesDir().getAbsolutePath() + "/content/ncellimage.jpg"));
         mediaContentAdapter = new MediaContentAdapter(this, ImagesArray, mediaList);
         mPager.setAdapter(mediaContentAdapter);
-
-        // Auto start of viewpager
-//        NUM_PAGES = ImagesArray.size();
         NUM_PAGES = mediaList.size();
     }
 
@@ -393,13 +397,11 @@ public class AdDisplayActivity extends AppCompatActivity {
         public void run() {
             try {
                 Log.d(TAG, "------------------ Message hereeeee");
+                Log.d(TAG, "NUM_PAGES: " + NUM_PAGES);
                 JSONObject payloadData = new JSONObject(strPayload);
                 String createdAt = payloadData.getString("createdAt");
 
-//                Log.d(TAG, "------------ Date: " + contentDate.equals(createdAt));
-
-//                                if (!Helper.compareDate(createdAt)) {
-                if (!Helper.compareDate(contentDate) || contentDate == null) {
+                if (!Helper.compareDate(contentDate) || NUM_PAGES == 0) {
                     // Saving content to preference
                     contentPref.putString(ContentPreferences.CONTENT_DATA, strPayload);
 
@@ -510,8 +512,44 @@ public class AdDisplayActivity extends AppCompatActivity {
 
     // endregion
 
+    // Todo: Device metrics [CPU usage, temperature, RAM usage] need to be implemented.
+    public void deviceMetrics() {
+        TimerTask healthTimerTask = new TimerTask() {
+            @Override
+            public void run() {
+                try {
+                    WifiManager wifiManager = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
+                    WifiInfo wifiInfo = wifiManager.getConnectionInfo();
+                    String payload = Helper.generateMqttDeviceHealthPayload(
+                            appPref.getString(AppPreferences.DEVICE_ID),
+                            Constants.PAYLOAD_TYPE_HEALTH,
+                            appPref.getString(AppPreferences.FLEET_ID),
+                            Integer.toString(new Random().nextInt(956) + 128) + "mb", // Dummy value
+                            Integer.toString(new Random().nextInt(85) + 15) + "%", // Dummy value
+                            Integer.toString(new Random().nextInt(45)) + "c", // Dummy value. Float.toString(Helper.getCurrentCPUTemperatureInCelcius())
+                            Integer.toString(wifiInfo.getRssi()),
+                            Integer.toString(new Random().nextInt(5) + 1) + "mbps", // Dummy value
+                            Integer.toString(new Random().nextInt(10) + 1) + "mbps", // Dummy value
+                            "",
+                            ""
+                    );
+                    Log.d(TAG, "Health: " + payload);
+                    Log.d(TAG, "temp: " + Helper.getCurrentCPUTemperatureInCelcius());
+                    if (appClass.isAWSConnected) {
+                        publishMsg(Constants.TOPIC_TELEMETRY_PUB, payload);
+                    }
+                } catch (Exception e) {
+                    Log.e(TAG, "Health data error: " + e.getMessage());
+                }
+            }
+        };
+
+        healthTimer.schedule(healthTimerTask, 1000, 15000);
+
+    }
+
     @Override
-    public boolean dispatchTouchEvent(MotionEvent event) {
+    public boolean dispatchTouchEvent(@NotNull MotionEvent event) {
         switch (event.getAction()) {
             case MotionEvent.ACTION_DOWN:
                 Log.d(TAG, "---------- ACTION_DOWN");

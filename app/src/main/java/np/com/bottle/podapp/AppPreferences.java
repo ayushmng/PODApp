@@ -18,11 +18,14 @@ public class AppPreferences {
     public final static String GROUP_ID = "groupId";
     public final static String ORGANISATION_ID = "orgId";
     public final static String CLIENT_ID = "clientId";
+    public final static String ANDROID_NAME = "androidName";
 
     public final static String AWS_IOT_CERTIFICATE = "Certificate";
     public final static String AWS_IOT_PRIVATE_KEY = "Private";
     public final static String AWS_IOT_PUBLIC_KEY = "Public";
+
     public final static String IS_PROVISIONED = "provision_status";
+    public final static String IS_KIOSK_MODE = "kiosk_status";
 
     public AppPreferences(Context context) {
         preferences = context.getSharedPreferences(APP_PREFERENCES_FILE_NAME, Context.MODE_PRIVATE);

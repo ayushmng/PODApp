@@ -11,6 +11,7 @@ public class ContentPreferences {
     public final static String CONTENT_DATE = "content_date";
     public final static String PRIORITY = "priority";
 
+
     public ContentPreferences(Context context) {
         preferences = context.getSharedPreferences(APP_PREFERENCES_FILE_NAME, Context.MODE_PRIVATE);
     }
