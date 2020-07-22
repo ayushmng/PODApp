@@ -112,7 +112,6 @@ public class ProvisioningActivity extends AppCompatActivity implements Websocket
     @Override
     public void onAwsConfigReceived(String configData) {
         Log.d(TAG, "onAwsConfigReceived: " + configData);
-
         try {
             JSONObject payload = new JSONObject(configData);
             JSONObject data = payload.getJSONObject("data");
@@ -147,7 +146,6 @@ public class ProvisioningActivity extends AppCompatActivity implements Websocket
      * Saves the AWS config data into shared preferences.
      */
     public void saveAwsConfigData(JSONObject data) throws JSONException {
-
         try {
             JSONObject certificates = data.getJSONObject("certificate");
             String strCert = downloadFile(certificates.getString(AppPreferences.AWS_IOT_CERTIFICATE));
@@ -163,7 +161,6 @@ public class ProvisioningActivity extends AppCompatActivity implements Websocket
         }
 
         Log.d(TAG, "Device ID: " + data.getString(AppPreferences.DEVICE_ID));
-
 
 
         appPref.putString(AppPreferences.ACTIVATION_CODE, data.getString(AppPreferences.ACTIVATION_CODE));
@@ -326,7 +323,6 @@ public class ProvisioningActivity extends AppCompatActivity implements Websocket
     private View.OnClickListener btnProvisionListener = new View.OnClickListener() {
         @Override
         public void onClick(View view) {
-
             connectToAws();
         }
     };

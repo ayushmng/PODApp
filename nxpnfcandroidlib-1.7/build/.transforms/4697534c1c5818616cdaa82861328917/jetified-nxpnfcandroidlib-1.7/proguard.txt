@@ -1,0 +1,284 @@
+
+
+
+
+
+
+
+-keepclassmembers,allowobfuscation class com.nxp.nfclib.ˋ {
+    <init>();
+}
+
+-keepclassmembers,allowobfuscation class com.nxp.nfclib.ˊ {
+    <init>();
+}
+
+-keepclassmembers,allowobfuscation class com.nxp.nfclib.ˏ {
+    <init>();
+}
+
+-keepclassmembers,allowobfuscation class com.nxp.nfclib.ʻ {
+    <init>();
+}
+
+-keepclassmembers,allowshrinking,allowobfuscation class com.nxp.nfclib.ʻ {
+    void ˏ();
+}
+
+-keepclassmembers,allowobfuscation class com.nxp.nfclib.ˎ {
+    <init>();
+}
+
+-keepclassmembers,allowobfuscation class com.nxp.nfclib.ᐝ {
+    <init>();
+}
+
+-keepclassmembers,allowobfuscation class com.nxp.nfclib.ι {
+    <init>();
+}
+
+-keepclassmembers,allowobfuscation class com.nxp.nfclib.ʼ {
+    <init>();
+}
+
+-keepclassmembers,allowobfuscation class com.nxp.nfclib.ʽ {
+    <init>();
+}
+
+-keepclassmembers,allowobfuscation class com.nxp.nfclib.ͺ {
+    <init>();
+}
+
+-keepclassmembers,allowoptimization,allowobfuscation class com.nxp.nfclib.NxpNfcLib {
+    <init>();
+}
+
+-keepclassmembers,allowobfuscation class com.nxp.nfclib.ʾ {
+    <init>();
+}
+
+-keepclassmembers,allowobfuscation class com.nxp.nfclib.ˈ {
+    <init>();
+}
+
+-keepclassmembers,allowobfuscation class com.nxp.nfclib.ˉ {
+    <init>();
+}
+
+-keepclassmembers,allowoptimization,allowobfuscation class com.nxp.nfclib.analytics.AnalyticsTracker {
+    <init>();
+}
+
+-keepclassmembers,allowoptimization,allowobfuscation class com.nxp.nfclib.classic.ClassicFactory {
+    <init>();
+}
+
+-keepclassmembers,allowshrinking,allowobfuscation class com.nxp.nfclib.classic.MFClassicEV1 {
+    void ˏ();
+}
+
+-keepclassmembers,allowobfuscation class com.nxp.nfclib.cloud.If {
+    <init>();
+}
+
+-keepclassmembers,allowoptimization,allowobfuscation class com.nxp.nfclib.cloud.TrustIdCloudClient {
+    <init>();
+}
+
+-keepclassmembers,allowobfuscation class com.nxp.nfclib.defaultimpl.ˏ {
+    <init>();
+}
+
+-keepclassmembers,allowoptimization,allowobfuscation class com.nxp.nfclib.defaultimpl.SecureKeyGenerator {
+    <init>();
+}
+
+-keepclassmembers,allowobfuscation class com.nxp.nfclib.desfire.ˋ {
+    <init>();
+}
+
+-keepclassmembers,allowobfuscation class com.nxp.nfclib.desfire.iF {
+    <init>();
+}
+
+-keepclassmembers,allowobfuscation class com.nxp.nfclib.desfire.ˎ {
+    <init>();
+}
+
+-keepclassmembers,allowobfuscation class com.nxp.nfclib.desfire.ʻ$ˋ {
+    <init>();
+}
+
+-keepclassmembers,allowshrinking,allowobfuscation class com.nxp.nfclib.desfire.ͺ {
+    void ˊ();
+}
+
+-keepclassmembers,allowobfuscation class com.nxp.nfclib.desfire.DESFireFactory {
+    <init>();
+}
+
+-keepclassmembers,allowoptimization,allowobfuscation class com.nxp.nfclib.desfire.DESFireFile {
+    <init>();
+}
+
+-keep,allowshrinking,allowobfuscation class com.nxp.nfclib.desfire.DESFireFile$ˋ
+
+-keep,allowshrinking,allowobfuscation class com.nxp.nfclib.desfire.DESFireFile$iF
+
+-keepclassmembers,allowobfuscation class com.nxp.nfclib.desfire.ι {
+    <init>();
+}
+
+-keepclassmembers,allowobfuscation class com.nxp.nfclib.desfire.EV1ApplicationKeySettings {
+    <init>();
+}
+
+-keepclassmembers,allowoptimization,allowobfuscation class com.nxp.nfclib.desfire.EV1PICCKeySettings {
+    <init>();
+}
+
+-keepclassmembers,allowobfuscation class com.nxp.nfclib.desfire.EV2ApplicationKeySettings {
+    <init>();
+}
+
+-keepclassmembers,allowobfuscation class com.nxp.nfclib.desfire.ՙ {
+    <init>();
+}
+
+-keepclassmembers,allowobfuscation class com.nxp.nfclib.desfire.ʹ {
+    <init>();
+}
+
+-keepclassmembers,allowobfuscation class com.nxp.nfclib.desfire.ﹺ {
+    <init>();
+}
+
+-keepclassmembers,allowobfuscation class com.nxp.nfclib.desfire.ｰ {
+    <init>();
+}
+
+-keepclassmembers,allowobfuscation class com.nxp.nfclib.desfire.ۥ {
+    <init>();
+}
+
+-keepclassmembers,allowobfuscation class com.nxp.nfclib.desfire.ˡ {
+    <init>();
+}
+
+-keepclassmembers,allowobfuscation class com.nxp.nfclib.desfire.ᐩ {
+    <init>();
+}
+
+-keepclassmembers,allowobfuscation class com.nxp.nfclib.desfire.ᕀ {
+    <init>();
+}
+
+-keepclassmembers,allowobfuscation class com.nxp.nfclib.desfire.יּ {
+    <init>();
+}
+
+-keepclassmembers,allowoptimization,allowobfuscation class com.nxp.nfclib.desfire.MIFAREIdentityUtility {
+    <init>();
+}
+
+-keepclassmembers,allowobfuscation class com.nxp.nfclib.desfire.ᗮ {
+    <init>();
+}
+
+-keepclassmembers,allowobfuscation class com.nxp.nfclib.desfire.ʲ {
+    <init>();
+}
+
+-keepclassmembers,allowobfuscation class com.nxp.nfclib.desfire.ᐤ {
+    <init>();
+}
+
+-keepclassmembers,allowobfuscation class com.nxp.nfclib.desfire.ᒡ {
+    <init>();
+}
+
+-keepclassmembers,allowobfuscation class com.nxp.nfclib.desfire.ᒢ {
+    <init>();
+}
+
+-keepclassmembers,allowshrinking,allowobfuscation class com.nxp.nfclib.icode.ICodeDNA {
+    void ˏ();
+}
+
+-keepclassmembers,allowobfuscation class com.nxp.nfclib.icode.ICodeFactory {
+    <init>();
+}
+
+-keepclassmembers,allowoptimization,allowobfuscation class com.nxp.nfclib.interfaces.CryptogramDetails {
+    <init>();
+}
+
+-keepclassmembers,allowoptimization,allowobfuscation class com.nxp.nfclib.license.LicenseManager {
+    <init>();
+}
+
+-keepclassmembers,allowobfuscation class com.nxp.nfclib.lite.AndroidLiteCardFactory {
+    <init>();
+}
+
+-keepclassmembers,allowobfuscation class com.nxp.nfclib.lite.LiteCardFactory {
+    <init>();
+}
+
+-keepclassmembers,allowoptimization,allowobfuscation class com.nxp.nfclib.ndef.Uri {
+    <init>();
+}
+
+-keepclassmembers,allowobfuscation class com.nxp.nfclib.ndef.Uri$ͺ {
+    <init>();
+}
+
+-keepclassmembers,allowshrinking,allowobfuscation class com.nxp.nfclib.ntag.NTAGI2Cplus {
+    void ˊ();
+}
+
+-keepclassmembers,allowshrinking,allowobfuscation class com.nxp.nfclib.ntag.NTag210 {
+    void ˋ();
+}
+
+-keepclassmembers,allowshrinking,allowobfuscation class com.nxp.nfclib.ntag.NTag210u {
+    void ˎ();
+}
+
+-keepclassmembers,allowshrinking,allowobfuscation class com.nxp.nfclib.plus.ˊ {
+    void ˊ();
+}
+
+-keepclassmembers,allowobfuscation class com.nxp.nfclib.plus.ͺ {
+    <init>();
+}
+
+-keepclassmembers,allowshrinking,allowobfuscation class com.nxp.nfclib.plus.ʽ {
+    void ˏ();
+}
+
+-keepclassmembers,allowshrinking,allowobfuscation class com.nxp.nfclib.ultralight.UltralightEV1 {
+    void ˏ();
+}
+
+-keepclassmembers,allowobfuscation class com.nxp.nfclib.ultralight.UltralightFactory {
+    <init>();
+}
+
+-keepclassmembers,allowshrinking,allowobfuscation class com.nxp.nfclib.ultralight.UltralightNano {
+    void ॱ();
+}
+
+-keepclassmembers,allowoptimization,allowobfuscation class com.nxp.nfclib.utils.Utilities {
+    <init>();
+}
+
+-keepclassmembers,allowoptimization,allowobfuscation class org.apache.http.HttpHeaders {
+    <init>();
+}
+
+# Enumerations.
+-keepclassmembers enum  * {
+    public static **[] values();
+    public static ** valueOf(java.lang.String);
+}

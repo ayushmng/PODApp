@@ -1,29 +1,23 @@
 package np.com.bottle.podapp.activity;
 
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
-
 import android.Manifest;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.util.Log;
-import android.widget.Button;
 import android.widget.ImageView;
-import android.widget.Toast;
 
-import java.lang.reflect.Array;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
-import javax.security.auth.callback.PasswordCallback;
-
 import np.com.bottle.podapp.AppPreferences;
 import np.com.bottle.podapp.R;
 import np.com.bottle.podapp.util.Constants;
-import np.com.bottle.podapp.util.Helper;
 
 public class SplashScreenActivity extends AppCompatActivity {
 
@@ -47,7 +41,7 @@ public class SplashScreenActivity extends AppCompatActivity {
 
         appPref = new AppPreferences(getApplicationContext());
 
-        if(checkPermission()) {
+        if (checkPermission()) {
             ivLogo.postDelayed(new Runnable() {
                 @Override
                 public void run() {
@@ -72,12 +66,12 @@ public class SplashScreenActivity extends AppCompatActivity {
 
         List<String> listPermissionsNeeded = new ArrayList<>();
         for (String perm : appPermissions) {
-            if(ContextCompat.checkSelfPermission(this, perm) != PackageManager.PERMISSION_GRANTED) {
+            if (ContextCompat.checkSelfPermission(this, perm) != PackageManager.PERMISSION_GRANTED) {
                 listPermissionsNeeded.add(perm);
             }
         }
 
-        if(!listPermissionsNeeded.isEmpty()) {
+        if (!listPermissionsNeeded.isEmpty()) {
             ActivityCompat.requestPermissions(this,
                     listPermissionsNeeded.toArray(new String[listPermissionsNeeded.size()]),
                     Constants.PERMISSIONS_REQUEST_CODE
@@ -95,18 +89,18 @@ public class SplashScreenActivity extends AppCompatActivity {
         Log.d(TAG, "permissions: " + permissions.length);
         Log.d(TAG, "grantResults: " + grantResults.length);
 
-        if(requestCode == Constants.PERMISSIONS_REQUEST_CODE) {
+        if (requestCode == Constants.PERMISSIONS_REQUEST_CODE) {
             HashMap<String, Integer> permissionResults = new HashMap<>();
             int deniedCount = 0;
 
-            for(int i = 0; i < grantResults.length; i++) {
-                if(grantResults[i] == PackageManager.PERMISSION_DENIED) {
+            for (int i = 0; i < grantResults.length; i++) {
+                if (grantResults[i] == PackageManager.PERMISSION_DENIED) {
                     permissionResults.put(permissions[i], grantResults[i]);
                     deniedCount++;
                 }
             }
 
-            if(deniedCount == 0) {
+            if (deniedCount == 0) {
                 initApp();
             }
             finish();
