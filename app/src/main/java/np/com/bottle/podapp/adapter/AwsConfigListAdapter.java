@@ -1,7 +1,6 @@
 package np.com.bottle.podapp.adapter;
 
 import android.content.Context;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -11,6 +10,8 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import np.com.bottle.podapp.R;
 import np.com.bottle.podapp.models.DataList;
@@ -42,8 +43,19 @@ public class AwsConfigListAdapter extends RecyclerView.Adapter<AwsConfigListAdap
         TextView tvLable = holder.tvLable;
         TextView tvValue = holder.tvValue;
 
-        tvLable.setText(aConfig.key);
+//        tvLable.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_WORDS);
+        tvLable.setText(capitalize(aConfig.key));
         tvValue.setText(aConfig.value);
+    }
+
+    private String capitalize(String capString) {
+        StringBuffer capBuffer = new StringBuffer();
+        Matcher capMatcher = Pattern.compile("([a-z-éá])([a-z-éá]*)", Pattern.CASE_INSENSITIVE).matcher(capString);
+        while (capMatcher.find()) {
+            capMatcher.appendReplacement(capBuffer, capMatcher.group(1).toUpperCase() + capMatcher.group(2).toLowerCase());
+        }
+
+        return capMatcher.appendTail(capBuffer).toString();
     }
 
     @Override

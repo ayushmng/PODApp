@@ -1,29 +1,32 @@
 package np.com.bottle.podapp.activity;
 
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.fragment.app.DialogFragment;
-import androidx.fragment.app.Fragment;
-import androidx.fragment.app.FragmentTransaction;
-import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
-
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.pm.PackageManager;
 import android.net.wifi.ScanResult;
+import android.net.wifi.SupplicantState;
+import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.CompoundButton;
-import android.widget.Switch;
+
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.SwitchCompat;
+import androidx.fragment.app.DialogFragment;
+import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentTransaction;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+import androidx.viewpager2.widget.ViewPager2;
 
 import com.amazonaws.mobileconnectors.iot.AWSIotMqttManager;
 import com.amazonaws.mobileconnectors.iot.AWSIotMqttNewMessageCallback;
 import com.amazonaws.mobileconnectors.iot.AWSIotMqttQos;
+import com.rd.PageIndicatorView;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -39,6 +42,7 @@ import np.com.bottle.podapp.ContentPreferences;
 import np.com.bottle.podapp.PODApp;
 import np.com.bottle.podapp.R;
 import np.com.bottle.podapp.adapter.AwsConfigListAdapter;
+import np.com.bottle.podapp.adapter.ViewPagerFragmentAdapter;
 import np.com.bottle.podapp.adapter.WifiListAdapter;
 import np.com.bottle.podapp.fragment.WifiConfigFragment;
 import np.com.bottle.podapp.interfaces.OnItemClickListener;
@@ -52,8 +56,12 @@ public class SettingsActivity extends AppCompatActivity implements OnItemClickLi
 
     private RecyclerView rvWifi;
     private RecyclerView rvDeviceDetails;
-    private Switch swKiosk;
+    private SwitchCompat swKiosk;
     private Button btnClearContent;
+
+    private ViewPagerFragmentAdapter fragmentAdapter;
+    private ViewPager2 viewPager;
+    private PageIndicatorView pageIndicatorView;
 
     private AppPreferences appPref;
     private ContentPreferences contentPref;
@@ -91,6 +99,8 @@ public class SettingsActivity extends AppCompatActivity implements OnItemClickLi
         rvDeviceDetails = findViewById(R.id.rvDeviceDetails);
         swKiosk = findViewById(R.id.swKiosk);
         btnClearContent = findViewById(R.id.btnClearContent);
+        viewPager = findViewById(R.id.view_pager);
+        pageIndicatorView = findViewById(R.id.pageIndicatorView);
 
         appClass = (PODApp) getApplication();
         mqttManager = appClass.getMqttManager();
@@ -101,15 +111,13 @@ public class SettingsActivity extends AppCompatActivity implements OnItemClickLi
 
         // Wifi RecyclerView Section
         populateWifiList(wifiList);
-        adapter = new WifiListAdapter(this, wifiList);
+        adapter = new WifiListAdapter(this,this, wifiList);
         rvWifi.setAdapter(adapter);
         rvWifi.setLayoutManager((new LinearLayoutManager(this)));
         mWifiManager = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
 
         populateDeviceDetails();
-        deviceDetailsAdapter = new AwsConfigListAdapter(deviceDetailList);
-        rvDeviceDetails.setAdapter(deviceDetailsAdapter);
-        rvDeviceDetails.setLayoutManager(new LinearLayoutManager(this));
+        setupViewPager();
 
         if (appClass.isAWSConnected) {
             subscribeToAndroidCommand();
@@ -143,7 +151,7 @@ public class SettingsActivity extends AppCompatActivity implements OnItemClickLi
         @Override
         public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
             String commandPayload = "";
-            if(b) {
+            if (b) {
                 commandPayload = Helper.generateMqttCommandPayload(
                         appPref.getString(AppPreferences.DEVICE_ID),
                         Constants.PAYLOAD_TYPE_COMMAND,
@@ -169,6 +177,7 @@ public class SettingsActivity extends AppCompatActivity implements OnItemClickLi
         public void onReceive(Context c, Intent intent) {
             if (intent.getAction().equals(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION)) {
                 List<ScanResult> mScanResults = mWifiManager.getScanResults();
+
                 // add your logic here
 
                 populateWifiList(mScanResults);
@@ -182,7 +191,7 @@ public class SettingsActivity extends AppCompatActivity implements OnItemClickLi
         wifiList.clear();
 
         for (ScanResult result : scanResults) {
-            if(!result.SSID.equals("")) {
+            if (!result.SSID.equals("")) {
                 wifiList.add(result);
             }
         }
@@ -192,10 +201,18 @@ public class SettingsActivity extends AppCompatActivity implements OnItemClickLi
         deviceDetailList.clear();
         deviceDetailList.add(new DataList(AppPreferences.DEVICE_NAME, appPref.getString(AppPreferences.DEVICE_NAME)));
         deviceDetailList.add(new DataList(AppPreferences.DEVICE_ID, appPref.getString(AppPreferences.DEVICE_ID)));
-        deviceDetailList.add(new DataList(AppPreferences.ACTIVATION_CODE, appPref.getString(AppPreferences.ACTIVATION_CODE)));
-//        deviceDetailList.add(new DataList(AppPreferences.DEVICE_URI, appPref.getString(AppPreferences.DEVICE_URI)));
+        deviceDetailList.add(new DataList(AppPreferences.ORGANISATION_ID, appPref.getString(AppPreferences.ORGANISATION_ID)));
         deviceDetailList.add(new DataList(AppPreferences.FLEET_ID, appPref.getString(AppPreferences.FLEET_ID)));
+        deviceDetailList.add(new DataList(AppPreferences.GROUP_ID, appPref.getString(AppPreferences.GROUP_ID)));
+        deviceDetailList.add(new DataList(AppPreferences.CLIENT_ID, appPref.getString(AppPreferences.CLIENT_ID)));
+        deviceDetailList.add(new DataList(AppPreferences.ACTIVATION_CODE, appPref.getString(AppPreferences.ACTIVATION_CODE)));
+        deviceDetailList.add(new DataList(AppPreferences.ANDROID_NAME, appPref.getString(AppPreferences.ANDROID_NAME)));
         deviceDetailList.add(new DataList(AppPreferences.MQTT_HOST, appPref.getString(AppPreferences.MQTT_HOST)));
+
+        deviceDetailList.add(new DataList(AppPreferences.AWS_IOT_CERTIFICATE, appPref.getString(AppPreferences.AWS_IOT_CERTIFICATE)));
+        deviceDetailList.add(new DataList(AppPreferences.AWS_IOT_PRIVATE_KEY, appPref.getString(AppPreferences.AWS_IOT_PRIVATE_KEY)));
+        deviceDetailList.add(new DataList(AppPreferences.AWS_IOT_PUBLIC_KEY, appPref.getString(AppPreferences.AWS_IOT_PUBLIC_KEY)));
+//        deviceDetailList.add(new DataList(AppPreferences.DEVICE_URI, appPref.getString(AppPreferences.DEVICE_URI)));
     }
 
     @Override
@@ -241,7 +258,7 @@ public class SettingsActivity extends AppCompatActivity implements OnItemClickLi
 
                                 if (essentialPayload.getString("payloadType").equals(Constants.PAYLOAD_TYPE_COMMAND)
                                         && payload.getString("module").equals("kiosk")) {
-                                    if(payload.getString("action").equals("enable")) {
+                                    if (payload.getString("action").equals("enable")) {
                                         appPref.putBoolean(AppPreferences.IS_KIOSK_MODE, true);
                                     } else {
                                         appPref.putBoolean(AppPreferences.IS_KIOSK_MODE, false);
@@ -257,5 +274,32 @@ public class SettingsActivity extends AppCompatActivity implements OnItemClickLi
         } catch (Exception e) {
             Log.e(TAG, "Error in Subscribing to Topic.");
         }
+    }
+
+    private void setupViewPager() {
+
+        fragmentAdapter = new ViewPagerFragmentAdapter(this, deviceDetailList);
+        viewPager.setAdapter(fragmentAdapter);
+
+        viewPager.isNestedScrollingEnabled();
+        int size = Math.round(deviceDetailList.size() / Constants.ITEMS_PER_PAGE);
+        pageIndicatorView.setCount(size);
+
+        viewPager.registerOnPageChangeCallback(new ViewPager2.OnPageChangeCallback() {
+            @Override
+            public void onPageScrolled(int position, float positionOffset, int positionOffsetPixels) {
+                super.onPageScrolled(position, positionOffset, positionOffsetPixels);
+            }
+
+            @Override
+            public void onPageSelected(int position) {
+                pageIndicatorView.setSelection(position);
+            }
+
+            @Override
+            public void onPageScrollStateChanged(int state) {
+                super.onPageScrollStateChanged(state);
+            }
+        });
     }
 }

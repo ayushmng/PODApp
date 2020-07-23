@@ -31,6 +31,8 @@ public class Constants {
 
     public static final int PERMISSIONS_REQUEST_CODE = 1240;
 
+    public static final int ITEMS_PER_PAGE = 6;
+
     public static void constructTopic(String orgId, String deviceId) {
         TOPIC_ACTIVATE_PUB = STAGE + "/data/activation/type/pub/device/" + deviceId;
         TOPIC_TELEMETRY_PUB = STAGE + "/data/telemetry/type/pub/device/" + deviceId;
@@ -46,3 +48,5 @@ public class Constants {
     public enum MEDIALOOPSTATUS {START, STOP};
 
 }
+
+

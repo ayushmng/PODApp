@@ -15,7 +15,7 @@ import np.com.bottle.podapp.R;
 
 /**
  * A simple {@link Fragment} subclass.
- * Use the {@link NfcDetectFragment#newInstance} factory method to
+ * Use the  factory method to
  * create an instance of this fragment.
  */
 public class NfcDetectFragment extends DialogFragment {
