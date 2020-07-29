@@ -1,9 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <dimen name="extra_large_text_size">20sp</dimen>
+
+    <dimen name="grand">62sp</dimen>
+    <dimen name="big_extra_large">48sp</dimen>
+    <dimen name="extra_large">28sp</dimen>
+    <dimen name="large">20sp</dimen>
     <dimen name="medium">18sp</dimen>
     <dimen name="medium_small">15sp</dimen>
     <dimen name="small">12sp</dimen>
+
+    <dimen name="card_view_corner_radius">8dp</dimen>
+    <dimen name="card_view_elevation">8dp</dimen>
+
+    <!-- Neumorph Design -->
+    <dimen name="neumorph_padding">4dp</dimen>
+    <dimen name="neumorph_shadow_elevation">2dp</dimen>
 
 </resources>

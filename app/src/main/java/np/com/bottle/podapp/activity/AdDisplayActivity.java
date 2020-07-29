@@ -1,11 +1,5 @@
 package np.com.bottle.podapp.activity;
 
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.fragment.app.DialogFragment;
-import androidx.fragment.app.Fragment;
-import androidx.fragment.app.FragmentTransaction;
-import androidx.viewpager.widget.ViewPager;
-
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -17,10 +11,15 @@ import android.nfc.NfcAdapter;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
-import android.os.StrictMode;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.widget.Toast;
+
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.fragment.app.DialogFragment;
+import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentTransaction;
+import androidx.viewpager.widget.ViewPager;
 
 import com.amazonaws.mobileconnectors.iot.AWSIotMqttManager;
 import com.amazonaws.mobileconnectors.iot.AWSIotMqttNewMessageCallback;
@@ -40,7 +39,6 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
@@ -90,7 +88,8 @@ public class AdDisplayActivity extends AppCompatActivity {
     private ArrayList<Uri> ImagesArray = new ArrayList<>();
     private List<Media> mediaList;
     private MediaContentAdapter mediaContentAdapter;
-    private Timer mediaChangeTimer = new Timer();;
+    private Timer mediaChangeTimer = new Timer();
+    ;
     private int count = 0;
 
     /*
@@ -208,7 +207,7 @@ public class AdDisplayActivity extends AppCompatActivity {
             Log.d(TAG, "Authentication Successfull");
 
             byte[] app_Ids = desFireEV1.getFileIDs();
-            Log.d(TAG, "App IDs: " + new String(app_Ids, StandardCharsets.UTF_8) );
+            Log.d(TAG, "App IDs: " + new String(app_Ids, StandardCharsets.UTF_8));
 
             byte[] fileData = desFireEV1.readData(NfcFileType.CUSTOMER_UUID_FILE_ID, 0, 0);
             String strUuid = Helper.convertHexToString(fileData);
@@ -235,8 +234,15 @@ public class AdDisplayActivity extends AppCompatActivity {
             String payload = paymentPayload.toString();
             Log.d(TAG, "paymentPayload: " + payload);
 
-            publishMsg(Constants.TOPIC_NFC_PAYMENT_PUB, payload);
-            showPaymentDialog(strName, strCardNumber);
+            //TODO: Check out
+//            publishMsg(Constants.TOPIC_NFC_PAYMENT_PUB, payload);
+
+            //TODO: Check this line
+//            showPaymentDialog(strName, strCardNumber);
+
+            Intent intent = new Intent(this, EntranceVerificaitonActivity.class);
+            startActivity(intent);
+
         } catch (Exception e) {
             Log.e(TAG, "Auth Fail");
             Log.e(TAG, "Exception: " + e.getMessage());
@@ -272,7 +278,7 @@ public class AdDisplayActivity extends AppCompatActivity {
             @Override
             public void run() {
                 if (appClass.isAWSConnected) {
-                    subscribeToContentResponse(TOPIC_CONTENT_RESPONSE);
+//                    subscribeToContentResponse(TOPIC_CONTENT_RESPONSE);
                     publishMsg(TOPIC_CONTENT_REQUEST, "");
                 }
             }
@@ -330,16 +336,17 @@ public class AdDisplayActivity extends AppCompatActivity {
 
     private void checkDirectory() {
         File dir = new File(getFilesDir().getAbsolutePath(), "content");
-        if(!dir.exists()) {
+        if (!dir.exists()) {
             dir.mkdirs();
-            Log.d(TAG,"Directory Created");
+            Log.d(TAG, "Directory Created");
         } else {
-            Log.d(TAG,"Directory Exists");
+            Log.d(TAG, "Directory Exists");
         }
     }
 
     /**
      * Method to swipe the viewpager content automatically at the given interval of the contents.
+     *
      * @param medialoopstatus enum to start or stop the media loop.
      */
     private void mediaLoop(Constants.MEDIALOOPSTATUS medialoopstatus) {
@@ -487,10 +494,10 @@ public class AdDisplayActivity extends AppCompatActivity {
         @Override
         public void onReceive(Context context, Intent intent) {
             Bundle bundle = intent.getExtras();
-            if(bundle != null) {
+            if (bundle != null) {
                 int resultCode = bundle.getInt(ContentDownloadIntentService.RESULT);
 
-                if(resultCode == ContentDownloadIntentService.RESULT_CODE_SUCCESS) {
+                if (resultCode == ContentDownloadIntentService.RESULT_CODE_SUCCESS) {
                     Toast.makeText(AdDisplayActivity.this, "File downloaded.", Toast.LENGTH_SHORT).show();
                     populateMedia(contentPref.getString(ContentPreferences.CONTENT_DATA));
                     mediaContentAdapter.notifyDataSetChanged();
@@ -556,7 +563,7 @@ public class AdDisplayActivity extends AppCompatActivity {
                 longPressTime = (Long) System.currentTimeMillis();
                 break;
             case MotionEvent.ACTION_UP:
-                if(((Long) System.currentTimeMillis() - longPressTime) > 3000){
+                if (((Long) System.currentTimeMillis() - longPressTime) > 3000) {
                     Log.d(TAG, "------------------------------ ACTION_UP");
                     startActivity(new Intent(getApplicationContext(), SettingsActivity.class));
                     return true;

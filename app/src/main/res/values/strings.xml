@@ -19,4 +19,16 @@
     <string name="choose_wifi_network">Choose Wifi Network</string>
     <string name="kiosk_mode">KIOSK Mode</string>
     <string name="clear_content">Clear Content</string>
+    <string name="pod">POD</string>
+    <string name="device_name">Device Name</string>
+    <string name="port_no">Port No.</string>
+    <string name="organization_id">Organization Id</string>
+    <string name="activation_code">Activation Code</string>
+    <string name="mqtt_endpoint">MQTT Endpoint</string>
+    <string name="welcome">Welcome</string>
+    <string name="logout">Logout</string>
+    <string name="no_of_visitors">No. of Visitors</string>
+    <string name="enter">Enter</string>
+    <string name="back">Back</string>
+    <string name="invalid_card">Invalid Card</string>
 </resources>

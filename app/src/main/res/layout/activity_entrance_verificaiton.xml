@@ -1,0 +1,291 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".activity.EntranceVerificaitonActivity">
+
+    <TextView
+        android:id="@+id/textView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="24dp"
+        android:layout_marginTop="32dp"
+        android:padding="4dp"
+        android:text="@string/welcome"
+        android:textAllCaps="true"
+        android:textColor="@color/dark_gray"
+        android:textSize="@dimen/large"
+        android:textStyle="bold"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="24dp"
+        android:padding="4dp"
+        android:text="@string/logout"
+        android:textAllCaps="true"
+        android:textColor="@color/red"
+        android:textSize="@dimen/large"
+        android:textStyle="bold"
+        app:layout_constraintBottom_toBottomOf="@+id/textView"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="@+id/textView" />
+
+    <androidx.cardview.widget.CardView
+        android:id="@+id/cardView"
+        android:layout_width="320dp"
+        android:layout_height="178dp"
+        android:layout_marginTop="32dp"
+        android:background="@color/dark_gray"
+        android:backgroundTint="@color/navy_black"
+        app:cardCornerRadius="@dimen/card_view_corner_radius"
+        app:cardElevation="@dimen/card_view_corner_radius"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/textView">
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/font"
+                android:padding="4dp"
+                android:text="Diamond"
+                android:textAllCaps="true"
+                android:textColor="@color/white"
+                android:textSize="@dimen/medium"
+
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <TextView
+                style="@style/PODTextView"
+                android:layout_marginStart="16dp"
+                android:layout_marginBottom="16dp"
+                android:padding="0dp"
+                android:text="Shobita Neupane"
+                android:textColor="@color/gray"
+                android:textStyle="bold"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintStart_toStartOf="parent" />
+
+            <ImageView
+                android:layout_width="48dp"
+                android:layout_height="24dp"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="16dp"
+                android:src="@drawable/lod_logo"
+                android:tint="@color/red"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+    </androidx.cardview.widget.CardView>
+
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="334dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/cardView">
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:id="@+id/invalid_card_cl"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_marginTop="32dp"
+                android:layout_marginEnd="8dp"
+                android:visibility="gone"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent">
+
+                <TextView
+                    android:id="@+id/validity_info"
+                    style="@style/PODTextView"
+                    android:text="@string/invalid_card"
+                    android:textAllCaps="true"
+                    android:textSize="@dimen/large"
+                    android:textStyle="bold"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent" />
+
+                <TextView
+                    android:id="@+id/validity_details"
+                    style="@style/PODTextView"
+                    android:layout_width="match_parent"
+                    android:layout_marginStart="38dp"
+                    android:layout_marginTop="8dp"
+                    android:layout_marginEnd="38dp"
+                    android:gravity="center"
+                    android:text="Sorry, the card you just scanned is invalid. Please contact POD support."
+                    android:textSize="@dimen/large"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@+id/validity_info" />
+
+            </androidx.constraintlayout.widget.ConstraintLayout>
+
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:id="@+id/active_card_cl"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="32dp"
+                android:layout_marginEnd="16dp"
+                android:visibility="visible"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent">
+
+                <TextView
+                    android:id="@+id/textView2"
+                    style="@style/PODTextView"
+                    android:text="@string/no_of_visitors"
+                    android:textSize="@dimen/large"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent" />
+
+                <TextView
+                    android:id="@+id/tv_visitors"
+                    style="@style/PODTextView"
+                    android:layout_marginTop="8dp"
+                    android:text="3"
+                    android:textSize="@dimen/big_extra_large"
+                    android:textStyle="bold"
+                    app:layout_constraintEnd_toEndOf="@+id/textView2"
+                    app:layout_constraintStart_toStartOf="@+id/textView2"
+                    app:layout_constraintTop_toBottomOf="@+id/textView2" />
+
+                <!--<soup.neumorphism.NeumorphFloatingActionButton
+                    android:id="@+id/neumorph_CircleView"
+                    style="@style/Widget.Neumorph.FloatingActionButton"
+                    android:layout_width="124dp"
+                    android:layout_height="124dp"
+                    android:layout_gravity="center"
+                    android:layout_marginStart="16dp"
+                    android:layout_marginTop="16dp"
+                    android:padding="8dp"
+                    android:scaleType="centerInside"
+                    app:neumorph_shadowColorDark="#111111"
+                    app:neumorph_shadowColorLight="#2c2c2c"
+                    app:neumorph_shadowElevation="@dimen/neumorph_shadow_elevation" />-->
+
+                <soup.neumorphism.NeumorphFloatingActionButton
+                    android:id="@+id/decrease_btn"
+                    style="@style/ShapeAppearance.Neumorph.FloatingActionButton"
+                    android:layout_width="68dp"
+                    android:layout_height="68dp"
+                    android:layout_marginTop="8dp"
+                    android:layout_marginEnd="68dp"
+                    android:padding="@dimen/neumorph_padding"
+                    android:scaleType="centerInside"
+                    android:src="@drawable/ic_baseline_remove_24"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@+id/tv_visitors"
+                    app:neumorph_shadowColorLight="@color/light_gray"
+                    app:neumorph_shadowElevation="@dimen/neumorph_shadow_elevation" />
+
+                <soup.neumorphism.NeumorphFloatingActionButton
+                    android:id="@+id/increment_btn"
+                    style="@style/ShapeAppearance.Neumorph.FloatingActionButton"
+                    android:layout_width="68dp"
+                    android:layout_height="68dp"
+                    android:layout_marginStart="8dp"
+                    android:layout_marginTop="8dp"
+                    android:padding="@dimen/neumorph_padding"
+                    android:scaleType="centerInside"
+                    app:neumorph_shapeType="pressed"
+                    android:src="@drawable/ic_baseline_add_24"
+                    app:layout_constraintStart_toEndOf="@+id/decrease_btn"
+                    app:layout_constraintTop_toBottomOf="@+id/tv_visitors"
+                    app:neumorph_shadowColorLight="@color/light_gray"
+                    app:neumorph_shadowElevation="@dimen/neumorph_shadow_elevation" />
+
+                <soup.neumorphism.NeumorphCardView
+                    android:id="@+id/enter_button"
+                    style="@style/Widget.Neumorph.CardView"
+                    android:layout_width="168dp"
+                    android:layout_height="68dp"
+                    android:layout_marginTop="24dp"
+                    android:padding="8dp"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@+id/increment_btn"
+                    app:neumorph_cornerFamily="rounded"
+                    app:neumorph_cornerSize="24dp"
+                    app:neumorph_shadowColorLight="@color/light_gray"
+                    app:neumorph_shadowElevation="@dimen/neumorph_shadow_elevation">
+
+                    <!--android:background="?selectableItemBackground"-->
+
+                    <androidx.constraintlayout.widget.ConstraintLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent">
+
+                        <TextView android:id="@+id/tv_button"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:padding="4dp"
+                            android:text="@string/enter"
+                            android:textAllCaps="true"
+                            android:textColor="@color/dark_gray"
+                            android:textSize="@dimen/medium"
+                            android:textStyle="bold"
+                            app:layout_constraintBottom_toBottomOf="parent"
+                            app:layout_constraintEnd_toEndOf="parent"
+                            app:layout_constraintStart_toStartOf="parent"
+                            app:layout_constraintTop_toTopOf="parent" />
+
+                    </androidx.constraintlayout.widget.ConstraintLayout>
+
+                </soup.neumorphism.NeumorphCardView>
+
+                <!--<np.com.bottle.podapp.util.HorizontalDottedProgress
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:layout_marginTop="8dp"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@+id/decrease_btn" />-->
+
+            </androidx.constraintlayout.widget.ConstraintLayout>
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+    </androidx.core.widget.NestedScrollView>
+
+    <TextView
+        android:id="@+id/back_button"
+        style="@style/PODTextView"
+        android:layout_marginBottom="48dp"
+        android:text="@string/back"
+        android:textAllCaps="true"
+        android:textColor="@color/red"
+        android:textSize="@dimen/large"
+        android:textStyle="bold"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

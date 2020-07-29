@@ -13,6 +13,7 @@ import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.CompoundButton;
+import android.widget.ImageButton;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.SwitchCompat;
@@ -58,6 +59,7 @@ public class SettingsActivity extends AppCompatActivity implements OnItemClickLi
     private RecyclerView rvDeviceDetails;
     private SwitchCompat swKiosk;
     private Button btnClearContent;
+    private ImageButton close;
 
     private ViewPagerFragmentAdapter fragmentAdapter;
     private ViewPager2 viewPager;
@@ -99,6 +101,7 @@ public class SettingsActivity extends AppCompatActivity implements OnItemClickLi
         rvDeviceDetails = findViewById(R.id.rvDeviceDetails);
         swKiosk = findViewById(R.id.swKiosk);
         btnClearContent = findViewById(R.id.btnClearContent);
+        close = findViewById(R.id.close_button);
         viewPager = findViewById(R.id.view_pager);
         pageIndicatorView = findViewById(R.id.pageIndicatorView);
 
@@ -113,8 +116,12 @@ public class SettingsActivity extends AppCompatActivity implements OnItemClickLi
         populateWifiList(wifiList);
         adapter = new WifiListAdapter(this,this, wifiList);
         rvWifi.setAdapter(adapter);
+
+        rvWifi.scrollToPosition(0);
+
         rvWifi.setLayoutManager((new LinearLayoutManager(this)));
         mWifiManager = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
+        adapter.notifyDataSetChanged();
 
         populateDeviceDetails();
         setupViewPager();
@@ -137,10 +144,15 @@ public class SettingsActivity extends AppCompatActivity implements OnItemClickLi
 
         swKiosk.setOnCheckedChangeListener(swKioskClickListener);
         btnClearContent.setOnClickListener(btnClearContentListener);
+        close.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                finish();
+            }
+        });
     }
 
     private View.OnClickListener btnClearContentListener = new View.OnClickListener() {
-
         @Override
         public void onClick(View view) {
             contentPref.clear();

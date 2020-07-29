@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "121497532043",
+    "firebase_url": "https://pod-app-30be0.firebaseio.com",
+    "project_id": "pod-app-30be0",
+    "storage_bucket": "pod-app-30be0.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:121497532043:android:eae27ecbdc26dc97bcc68e",
+        "android_client_info": {
+          "package_name": "np.com.bottle.podapp"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "121497532043-ohk2mupqj165u8duq9gdjauruck527ka.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA2tDE5Va_0rD0xNNSI56e576TG8ntqv30"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "121497532043-ohk2mupqj165u8duq9gdjauruck527ka.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

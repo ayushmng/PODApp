@@ -8,4 +8,18 @@
         <item name="colorAccent">@color/colorAccent</item>
     </style>
 
+    <!-- Text View Specs -->
+    <style name="PODTextView">
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:textColor">@color/dark_gray</item>
+        <item name="android:padding">4dp</item>
+    </style>
+
+    <!-- Neumorph CardView -->
+    <style name="CustomShapeAppearance">
+        <item name="neumorph_cornerFamily">rounded</item>
+        <item name="neumorph_cornerSize">14dp</item>
+    </style>
+
 </resources>
