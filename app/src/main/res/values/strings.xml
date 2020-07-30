@@ -31,4 +31,7 @@
     <string name="enter">Enter</string>
     <string name="back">Back</string>
     <string name="invalid_card">Invalid Card</string>
+    <string name="enter_your_pin_to_continue">Enter Your Pin to Continue</string>
+    <string name="clear">CLEAR</string>
+    <string name="cancel">Cancel</string>
 </resources>

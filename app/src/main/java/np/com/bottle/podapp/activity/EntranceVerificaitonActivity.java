@@ -7,8 +7,13 @@ import android.view.View;
 import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.fragment.app.DialogFragment;
+import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentTransaction;
 
 import np.com.bottle.podapp.R;
+import np.com.bottle.podapp.fragment.EnterPinFragment;
+import np.com.bottle.podapp.fragment.NfcDetectFragment;
 import soup.neumorphism.NeumorphCardView;
 import soup.neumorphism.NeumorphFloatingActionButton;
 import soup.neumorphism.ShapeType;
@@ -106,6 +111,8 @@ public class EntranceVerificaitonActivity extends AppCompatActivity {
 
                 buttonText.setText("CONFIRM");
                 backButton.setVisibility(View.VISIBLE);
+            } else {
+                showPinCodeDialog();
             }
         }
     };
@@ -124,4 +131,21 @@ public class EntranceVerificaitonActivity extends AppCompatActivity {
             backButton.setVisibility(View.GONE);
         }
     };
+
+    private void showPinCodeDialog() {
+        FragmentTransaction ft = getSupportFragmentManager().beginTransaction();
+        Fragment fragment = getSupportFragmentManager().findFragmentByTag("dialog");
+        if (fragment != null) {
+            ft.remove(fragment);
+        }
+        ft.addToBackStack(null);
+
+        Bundle args = new Bundle();
+//        args.putString("name", name);
+//        args.putInt("cardNumber", cardNumber);
+
+        EnterPinFragment dialogFragment = new EnterPinFragment();
+        dialogFragment.setArguments(args);
+        dialogFragment.show(ft, "dialog");
+    }
 }
