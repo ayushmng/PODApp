@@ -34,4 +34,5 @@
     <string name="enter_your_pin_to_continue">Enter Your Pin to Continue</string>
     <string name="clear">CLEAR</string>
     <string name="cancel">Cancel</string>
+    <string name="your_card_is_processing">Your card is processing</string>
 </resources>

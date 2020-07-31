@@ -6,6 +6,8 @@ import android.content.Context;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
+import android.os.Handler;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -16,8 +18,12 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.fragment.app.DialogFragment;
+import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentTransaction;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+
+import com.zl.reik.dilatingdotsprogressbar.DilatingDotsProgressBar;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -25,29 +31,28 @@ import java.util.Objects;
 
 import np.com.bottle.podapp.R;
 import soup.neumorphism.NeumorphCardView;
-import soup.neumorphism.ShapeType;
 
 
 public class EnterPinFragment extends DialogFragment implements DigitAdapter.buttonClickListener {
 
+    ConstraintLayout constraintLayout_primary, constraintLayout_secondary;
+    DilatingDotsProgressBar mDilatingDotsProgressBar;
     DigitAdapter adapter;
     RecyclerView digitRecyclerView;
     NeumorphCardView clear, zero, backspace;
-    TextView textField, cancel;
+    TextView textField, ok, cancel;
 
     String pin;
 
     private static final String ARG_PARAM1 = "param1";
     private static final String ARG_PARAM2 = "param2";
 
-    // TODO: Rename and change types of parameters
     private String mParam1;
     private String mParam2;
 
     public EnterPinFragment() {
     }
 
-    // TODO: Rename and change types and number of parameters
     public static EnterPinFragment newInstance(String param1, String param2) {
         EnterPinFragment fragment = new EnterPinFragment();
         Bundle args = new Bundle();
@@ -88,12 +93,16 @@ public class EnterPinFragment extends DialogFragment implements DigitAdapter.but
 
         View view = inflater.inflate(R.layout.fragment_enter_pin, container, false);
 
+        constraintLayout_primary = view.findViewById(R.id.constraint_layout1);
+        constraintLayout_secondary = view.findViewById(R.id.constraint_layout2);
         digitRecyclerView = view.findViewById(R.id.digits_recyclerView);
         clear = view.findViewById(R.id.nu_clear);
         zero = view.findViewById(R.id.nu_zero);
         backspace = view.findViewById(R.id.nu_backspace);
         textField = view.findViewById(R.id.tv_digits);
+        ok = view.findViewById(R.id.tv_ok);
         cancel = view.findViewById(R.id.tv_cancel);
+        mDilatingDotsProgressBar = view.findViewById(R.id.progress);
 
         pin = textField.getText().toString();
 
@@ -101,6 +110,14 @@ public class EnterPinFragment extends DialogFragment implements DigitAdapter.but
         zero.setOnClickListener(zeroClickListener);
         backspace.setOnClickListener(backClickListener);
         cancel.setOnClickListener(cancelClickListener);
+
+        ok.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                pin = textField.getText().toString();
+                checkPin();
+            }
+        });
 
         List<Integer> list = new ArrayList<>();
         for (int i = 1; i < 10; i++) {
@@ -113,6 +130,28 @@ public class EnterPinFragment extends DialogFragment implements DigitAdapter.but
         adapter.notifyDataSetChanged();
 
         return view;
+    }
+
+    private void checkPin() {
+        if (pin.equals("1234")) {
+            constraintLayout_primary.setVisibility(View.GONE);
+            constraintLayout_secondary.setVisibility(View.VISIBLE);
+            mDilatingDotsProgressBar.showNow();
+        } else {
+            constraintLayout_primary.setVisibility(View.VISIBLE);
+            constraintLayout_secondary.setVisibility(View.GONE);
+        }
+
+        final Handler handler = new Handler();
+        handler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                mDilatingDotsProgressBar.hideNow();
+                constraintLayout_primary.setVisibility(View.VISIBLE);
+                constraintLayout_secondary.setVisibility(View.GONE);
+                Log.d("Handler", "Running Handler");
+            }
+        }, 5000);
     }
 
     private View.OnClickListener clearClickListener = new View.OnClickListener() {
@@ -128,6 +167,8 @@ public class EnterPinFragment extends DialogFragment implements DigitAdapter.but
         public void onClick(View view) {
             pin = textField.getText().toString();
             textField.setText(pin + "0");
+
+            checkPin();
         }
     };
 
@@ -157,6 +198,24 @@ public class EnterPinFragment extends DialogFragment implements DigitAdapter.but
     public void onClick(int position) {
         pin = textField.getText().toString();
         textField.setText(pin + (position + 1));
+        checkPin();
+    }
+
+    private void showProgressDialog() {
+        FragmentTransaction ft = Objects.requireNonNull(getActivity()).getSupportFragmentManager().beginTransaction();
+        Fragment fragment = Objects.requireNonNull(getActivity()).getSupportFragmentManager().findFragmentByTag("dialog");
+        if (fragment != null) {
+            ft.remove(fragment);
+        }
+        ft.addToBackStack(null);
+
+        Bundle args = new Bundle();
+//        args.putString("name", name);
+//        args.putInt("cardNumber", cardNumber);
+
+        EnterPinFragment dialogFragment = new EnterPinFragment();
+        dialogFragment.setArguments(args);
+        dialogFragment.show(ft, "dialog");
     }
 }
 

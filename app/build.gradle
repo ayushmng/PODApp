@@ -57,6 +57,9 @@ dependencies {
     //Neumorphism
     implementation 'com.github.fornewid:neumorphism:0.1.11'
 
+    //DotProgressBar
+    implementation 'com.github.justzak:dilatingdotsprogressbar:1.0.1'
+
     //ViewPager
     implementation 'androidx.viewpager2:viewpager2:1.0.0'
 
@@ -88,9 +91,12 @@ dependencies {
 
     // video player
     implementation 'com.google.android.exoplayer:exoplayer:2.11.4'
-
+    implementation "androidx.core:core-ktx:+"
 }
 apply plugin: 'com.google.gms.google-services'
+repositories {
+    mavenCentral()
+}
 
 //repositories {
 //    mavenCentral()
