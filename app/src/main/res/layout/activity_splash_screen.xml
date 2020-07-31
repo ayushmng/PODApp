@@ -4,17 +4,38 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/colorPrimaryDark"
     tools:context=".activity.SplashScreenActivity">
 
     <ImageView
-        android:id="@+id/ivLogo"
-        android:layout_width="158dp"
-        android:layout_height="66dp"
-        android:tint="@color/white"
+        android:id="@+id/main_logo"
+        android:layout_width="320dp"
+        android:layout_height="320dp"
+        android:src="@drawable/device_logo"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:srcCompat="@drawable/bottle_logo" />
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <TextView
+        android:id="@+id/textView7"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:padding="4dp"
+        android:text="@string/powered_by"
+        android:textColor="@color/dark_gray"
+        android:textSize="@dimen/medium"
+        android:textStyle="bold"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/main_logo" />
+
+    <ImageView
+        android:id="@+id/ivLogo"
+        android:layout_width="118dp"
+        android:layout_height="38dp"
+        android:src="@drawable/bottle_logo"
+        app:layout_constraintStart_toEndOf="@+id/textView7"
+        app:layout_constraintTop_toTopOf="@+id/textView7" />
+
 </androidx.constraintlayout.widget.ConstraintLayout>

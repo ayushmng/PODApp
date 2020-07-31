@@ -57,6 +57,9 @@ dependencies {
     //Neumorphism
     implementation 'com.github.fornewid:neumorphism:0.1.11'
 
+    //Lotte animation
+    implementation "com.airbnb.android:lottie:3.4.0"
+
     //DotProgressBar
     implementation 'com.github.justzak:dilatingdotsprogressbar:1.0.1'
 

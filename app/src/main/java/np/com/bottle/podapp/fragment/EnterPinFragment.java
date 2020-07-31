@@ -3,6 +3,7 @@ package np.com.bottle.podapp.fragment;
 import android.annotation.SuppressLint;
 import android.app.Dialog;
 import android.content.Context;
+import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
@@ -18,8 +19,6 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.fragment.app.DialogFragment;
-import androidx.fragment.app.Fragment;
-import androidx.fragment.app.FragmentTransaction;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -30,6 +29,7 @@ import java.util.List;
 import java.util.Objects;
 
 import np.com.bottle.podapp.R;
+import np.com.bottle.podapp.activity.SettingsActivity;
 import soup.neumorphism.NeumorphCardView;
 
 
@@ -40,9 +40,10 @@ public class EnterPinFragment extends DialogFragment implements DigitAdapter.but
     DigitAdapter adapter;
     RecyclerView digitRecyclerView;
     NeumorphCardView clear, zero, backspace;
-    TextView textField, ok, cancel;
+    TextView textField, textHead, ok, cancel;
 
     String pin;
+    Integer value;
 
     private static final String ARG_PARAM1 = "param1";
     private static final String ARG_PARAM2 = "param2";
@@ -50,17 +51,18 @@ public class EnterPinFragment extends DialogFragment implements DigitAdapter.but
     private String mParam1;
     private String mParam2;
 
-    public EnterPinFragment() {
+    public EnterPinFragment(Integer value) {
+        this.value = value;
     }
 
-    public static EnterPinFragment newInstance(String param1, String param2) {
+    /*public static EnterPinFragment newInstance(String param1, String param2) {
         EnterPinFragment fragment = new EnterPinFragment();
         Bundle args = new Bundle();
         args.putString(ARG_PARAM1, param1);
         args.putString(ARG_PARAM2, param2);
         fragment.setArguments(args);
         return fragment;
-    }
+    }*/
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -100,6 +102,7 @@ public class EnterPinFragment extends DialogFragment implements DigitAdapter.but
         zero = view.findViewById(R.id.nu_zero);
         backspace = view.findViewById(R.id.nu_backspace);
         textField = view.findViewById(R.id.tv_digits);
+        textHead = view.findViewById(R.id.textView8);
         ok = view.findViewById(R.id.tv_ok);
         cancel = view.findViewById(R.id.tv_cancel);
         mDilatingDotsProgressBar = view.findViewById(R.id.progress);
@@ -119,6 +122,12 @@ public class EnterPinFragment extends DialogFragment implements DigitAdapter.but
             }
         });
 
+        if (value == 0) {
+            textHead.setText(getString(R.string.enter_pin_to_access_pod_settings)); // Ad Activity
+        } else {
+            textHead.setText(getString(R.string.enter_your_pin_to_continue)); // Entrance Activity
+        }
+
         List<Integer> list = new ArrayList<>();
         for (int i = 1; i < 10; i++) {
             list.add(i);
@@ -133,25 +142,35 @@ public class EnterPinFragment extends DialogFragment implements DigitAdapter.but
     }
 
     private void checkPin() {
-        if (pin.equals("1234")) {
-            constraintLayout_primary.setVisibility(View.GONE);
-            constraintLayout_secondary.setVisibility(View.VISIBLE);
-            mDilatingDotsProgressBar.showNow();
-        } else {
-            constraintLayout_primary.setVisibility(View.VISIBLE);
-            constraintLayout_secondary.setVisibility(View.GONE);
-        }
 
-        final Handler handler = new Handler();
-        handler.postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                mDilatingDotsProgressBar.hideNow();
+        if (value == 1) {
+            if (pin.equals("1234")) { // For Entrance Activity
+                constraintLayout_primary.setVisibility(View.GONE);
+                constraintLayout_secondary.setVisibility(View.VISIBLE);
+                mDilatingDotsProgressBar.showNow();
+            } else {
                 constraintLayout_primary.setVisibility(View.VISIBLE);
                 constraintLayout_secondary.setVisibility(View.GONE);
-                Log.d("Handler", "Running Handler");
             }
-        }, 5000);
+
+            final Handler handler = new Handler();
+            handler.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    mDilatingDotsProgressBar.hideNow();
+                    constraintLayout_primary.setVisibility(View.VISIBLE);
+                    constraintLayout_secondary.setVisibility(View.GONE);
+                    Log.d("Handler", "Running Handler");
+                }
+            }, 5000);
+
+        } else {
+            if (pin.equals("123456")) { // For Ad Activity
+                dismiss();
+                startActivity(new Intent(getActivity(), SettingsActivity.class));
+            }
+        }
+
     }
 
     private View.OnClickListener clearClickListener = new View.OnClickListener() {
@@ -167,8 +186,6 @@ public class EnterPinFragment extends DialogFragment implements DigitAdapter.but
         public void onClick(View view) {
             pin = textField.getText().toString();
             textField.setText(pin + "0");
-
-            checkPin();
         }
     };
 
@@ -198,25 +215,8 @@ public class EnterPinFragment extends DialogFragment implements DigitAdapter.but
     public void onClick(int position) {
         pin = textField.getText().toString();
         textField.setText(pin + (position + 1));
-        checkPin();
     }
 
-    private void showProgressDialog() {
-        FragmentTransaction ft = Objects.requireNonNull(getActivity()).getSupportFragmentManager().beginTransaction();
-        Fragment fragment = Objects.requireNonNull(getActivity()).getSupportFragmentManager().findFragmentByTag("dialog");
-        if (fragment != null) {
-            ft.remove(fragment);
-        }
-        ft.addToBackStack(null);
-
-        Bundle args = new Bundle();
-//        args.putString("name", name);
-//        args.putInt("cardNumber", cardNumber);
-
-        EnterPinFragment dialogFragment = new EnterPinFragment();
-        dialogFragment.setArguments(args);
-        dialogFragment.show(ft, "dialog");
-    }
 }
 
 

@@ -144,7 +144,7 @@ public class EntranceVerificaitonActivity extends AppCompatActivity {
 //        args.putString("name", name);
 //        args.putInt("cardNumber", cardNumber);
 
-        EnterPinFragment dialogFragment = new EnterPinFragment();
+        EnterPinFragment dialogFragment = new EnterPinFragment(1);
         dialogFragment.setArguments(args);
         dialogFragment.show(ft, "dialog");
     }

@@ -52,6 +52,7 @@ import np.com.bottle.podapp.ContentPreferences;
 import np.com.bottle.podapp.PODApp;
 import np.com.bottle.podapp.R;
 import np.com.bottle.podapp.adapter.MediaContentAdapter;
+import np.com.bottle.podapp.fragment.EnterPinFragment;
 import np.com.bottle.podapp.fragment.NfcDetectFragment;
 import np.com.bottle.podapp.models.Media;
 import np.com.bottle.podapp.nfc.KeyInfoProvider;
@@ -565,11 +566,29 @@ public class AdDisplayActivity extends AppCompatActivity {
             case MotionEvent.ACTION_UP:
                 if (((Long) System.currentTimeMillis() - longPressTime) > 3000) {
                     Log.d(TAG, "------------------------------ ACTION_UP");
-                    startActivity(new Intent(getApplicationContext(), SettingsActivity.class));
+                    showPinCodeDialog();
+//                    startActivity(new Intent(getApplicationContext(), SettingsActivity.class));
                     return true;
                 }
                 break;
         }
         return super.dispatchTouchEvent(event);
+    }
+
+    private void showPinCodeDialog() {
+        FragmentTransaction ft = getSupportFragmentManager().beginTransaction();
+        Fragment fragment = getSupportFragmentManager().findFragmentByTag("dialog");
+        if (fragment != null) {
+            ft.remove(fragment);
+        }
+        ft.addToBackStack(null);
+
+        Bundle args = new Bundle();
+//        args.putString("activity", "ad");
+//        args.putInt("cardNumber", cardNumber);
+
+        EnterPinFragment dialogFragment = new EnterPinFragment(0);
+        dialogFragment.setArguments(args);
+        dialogFragment.show(ft, "dialog");
     }
 }

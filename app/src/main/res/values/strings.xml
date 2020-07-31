@@ -32,7 +32,9 @@
     <string name="back">Back</string>
     <string name="invalid_card">Invalid Card</string>
     <string name="enter_your_pin_to_continue">Enter Your Pin to Continue</string>
+    <string name="enter_pin_to_access_pod_settings">Enter PIN to Access POD Settings</string>
     <string name="clear">CLEAR</string>
     <string name="cancel">Cancel</string>
     <string name="your_card_is_processing">Your card is processing</string>
+    <string name="powered_by">Powered By</string>
 </resources>
