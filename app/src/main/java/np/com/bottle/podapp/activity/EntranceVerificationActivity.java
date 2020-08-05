@@ -7,23 +7,24 @@ import android.view.View;
 import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.fragment.app.DialogFragment;
+import androidx.cardview.widget.CardView;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentTransaction;
 
 import np.com.bottle.podapp.R;
 import np.com.bottle.podapp.fragment.EnterPinFragment;
-import np.com.bottle.podapp.fragment.NfcDetectFragment;
 import soup.neumorphism.NeumorphCardView;
 import soup.neumorphism.NeumorphFloatingActionButton;
 import soup.neumorphism.ShapeType;
 
-public class EntranceVerificaitonActivity extends AppCompatActivity {
+public class EntranceVerificationActivity extends AppCompatActivity {
 
+    CardView cardView;
     NeumorphFloatingActionButton incrementBtn, decreaseBtn;
     NeumorphCardView enterButton;
-    TextView numOfVisitors, backButton, buttonText;
+    TextView numOfVisitors, backButton, buttonText, cardHolderName, cardType, cardNumber, logout;
 
+    String name, number;
     Integer visitors;
 
     @Override
@@ -31,6 +32,11 @@ public class EntranceVerificaitonActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_entrance_verificaiton);
         findViewsById();
+
+        name = getIntent().getStringExtra(AdDisplayActivity.Name);
+        number = getIntent().getStringExtra(AdDisplayActivity.CardNumber);
+        cardHolderName.setText(name);
+        cardNumber.setText(number);
 
         visitors = Integer.valueOf(numOfVisitors.getText().toString());
         if (visitors == 3) {
@@ -47,15 +53,45 @@ public class EntranceVerificaitonActivity extends AppCompatActivity {
         decreaseBtn.setOnClickListener(decrementClickListener);
         enterButton.setOnClickListener(enterButtonClickListener);
         backButton.setOnClickListener(backButtonClickListener);
+
+        logout.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                finish();
+                onBackPressed();
+            }
+        });
     }
 
     private void findViewsById() {
+
+        cardView = findViewById(R.id.cardView);
         numOfVisitors = findViewById(R.id.tv_visitors);
         incrementBtn = findViewById(R.id.increment_btn);
         decreaseBtn = findViewById(R.id.decrease_btn);
         enterButton = findViewById(R.id.enter_button);
         backButton = findViewById(R.id.back_button);
         buttonText = findViewById(R.id.tv_button);
+        cardHolderName = findViewById(R.id.card_holder_name);
+        cardType = findViewById(R.id.card_type);
+        cardNumber = findViewById(R.id.card_number);
+        logout = findViewById(R.id.logout);
+    }
+
+    private void setCardDesign(String cardName) {
+        switch (cardName) {
+
+            case "diamond":
+                cardView.setBackgroundTintList(getResources().getColorStateList(R.color.dark_gray));
+                break;
+
+            case "platinum":
+                cardView.setBackgroundTintList(getResources().getColorStateList(R.color.gray));
+                break;
+            case "gold":
+                cardView.setBackgroundTintList(getResources().getColorStateList(R.color.dark_gray));
+                break;
+        }
     }
 
     private View.OnClickListener incrementClickListener = new View.OnClickListener() {

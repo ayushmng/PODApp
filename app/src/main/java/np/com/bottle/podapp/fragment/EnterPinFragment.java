@@ -32,7 +32,6 @@ import np.com.bottle.podapp.R;
 import np.com.bottle.podapp.activity.SettingsActivity;
 import soup.neumorphism.NeumorphCardView;
 
-
 public class EnterPinFragment extends DialogFragment implements DigitAdapter.buttonClickListener {
 
     ConstraintLayout constraintLayout_primary, constraintLayout_secondary;

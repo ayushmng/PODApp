@@ -241,7 +241,9 @@ public class AdDisplayActivity extends AppCompatActivity {
             //TODO: Check this line
 //            showPaymentDialog(strName, strCardNumber);
 
-            Intent intent = new Intent(this, EntranceVerificaitonActivity.class);
+            Intent intent = new Intent(this, EntranceVerificationActivity.class);
+            intent.putExtra(Name, strName);
+            intent.putExtra(CardNumber, strCardNumber);
             startActivity(intent);
 
         } catch (Exception e) {
@@ -575,6 +577,7 @@ public class AdDisplayActivity extends AppCompatActivity {
         return super.dispatchTouchEvent(event);
     }
 
+    // Displays PinCode Dialog box
     private void showPinCodeDialog() {
         FragmentTransaction ft = getSupportFragmentManager().beginTransaction();
         Fragment fragment = getSupportFragmentManager().findFragmentByTag("dialog");
@@ -591,4 +594,7 @@ public class AdDisplayActivity extends AppCompatActivity {
         dialogFragment.setArguments(args);
         dialogFragment.show(ft, "dialog");
     }
+
+    public static String Name = "NAME";
+    public static String CardNumber = "CARD_NUMBER";
 }
