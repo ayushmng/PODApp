@@ -13,9 +13,11 @@ import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 import android.view.MotionEvent;
+import android.view.View;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.fragment.app.DialogFragment;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentTransaction;
@@ -24,6 +26,8 @@ import androidx.viewpager.widget.ViewPager;
 import com.amazonaws.mobileconnectors.iot.AWSIotMqttManager;
 import com.amazonaws.mobileconnectors.iot.AWSIotMqttNewMessageCallback;
 import com.amazonaws.mobileconnectors.iot.AWSIotMqttQos;
+import com.google.android.exoplayer2.Player;
+import com.google.android.exoplayer2.ui.PlayerView;
 import com.nxp.nfclib.CardType;
 import com.nxp.nfclib.KeyType;
 import com.nxp.nfclib.NxpNfcLib;
@@ -62,14 +66,21 @@ import np.com.bottle.podapp.services.ContentDownloadIntentService;
 import np.com.bottle.podapp.util.Constants;
 import np.com.bottle.podapp.util.Helper;
 
-public class AdDisplayActivity extends AppCompatActivity {
+public class AdDisplayActivity extends AppCompatActivity implements MediaContentAdapter.OnVideoEndListener {
 
     private static String TAG = AdDisplayActivity.class.getSimpleName();
+    private ConstraintLayout lotteLayout;
     private AppPreferences appPref;
     private ContentPreferences contentPref;
     private PODApp appClass;
     private long longPressTime;
     private Context context;
+
+    //AdView
+    private boolean isVideoPlaying = false;
+    private boolean pageScrolled;
+    private final static int INTERVAL = 1000 * 2; //10 secs
+    private final static int INTERVAL2 = 1000 * 60; //1 min
 
     // NFC
     private NfcAdapter nfcAdapter;
@@ -110,6 +121,7 @@ public class AdDisplayActivity extends AppCompatActivity {
 
 //        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
+        lotteLayout = findViewById(R.id.constraint_lotte);
         appPref = new AppPreferences(getApplicationContext());
         contentPref = new ContentPreferences(getApplicationContext());
         appClass = (PODApp) getApplication();
@@ -124,6 +136,69 @@ public class AdDisplayActivity extends AppCompatActivity {
         initializeKeys();
         initializeMedia();
         deviceMetrics();
+
+        mPager.setVisibility(View.GONE);
+        handleAdViews();
+    }
+
+    private void handleAdViews() {
+        // Helps to display Lotte animation at first for 10sec
+        if (!isVideoPlaying) {
+            Thread thread = new Thread() {
+                @Override
+                public void run() {
+                    try {
+                        Thread.sleep(INTERVAL);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            mPager.setVisibility(View.VISIBLE);
+                            lotteLayout.setVisibility(View.GONE);
+                            mediaLoop(Constants.MEDIALOOPSTATUS.START);
+                        }
+                    });
+                }
+            };
+            thread.start();
+        }
+
+        // Displays ad view for 1min and animation for 10sec
+        final Handler handler = new Handler();
+        handler.postDelayed(new Runnable() {
+            public void run() {
+
+                mPager.setVisibility(View.GONE);
+                lotteLayout.setVisibility(View.VISIBLE);
+
+                Log.i("Show Timer", "Timer starts");
+                handler.postDelayed(this, INTERVAL2);
+
+                Thread thread = new Thread() {
+                    @Override
+                    public void run() {
+                        try {
+                            Thread.sleep(INTERVAL);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                Log.i("Show Timer", "Thread starts");
+                                mPager.setVisibility(View.VISIBLE);
+                                lotteLayout.setVisibility(View.GONE);
+                            }
+                        });
+                    }
+                };
+                thread.start();
+            }
+        }, INTERVAL2);
     }
 
     @Override
@@ -140,11 +215,20 @@ public class AdDisplayActivity extends AppCompatActivity {
         unregisterReceiver(receiver);
         mediaLoop(Constants.MEDIALOOPSTATUS.STOP);
         healthTimer.cancel();
+//        mediaContentAdapter = new MediaContentAdapter(this, AdDisplayActivity.this, ImagesArray, mediaList, true, true);
+//        mediaContentAdapter.stopVideoPlayer();
+        videoPause();
+        Log.i(TAG, "I'm here...Ad");
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        unregisterReceiver(receiver);
+        mediaLoop(Constants.MEDIALOOPSTATUS.STOP);
+        Log.i(TAG, "I'm here...Ad");
+        videoPause();
+//        mediaContentAdapter = new MediaContentAdapter(this, AdDisplayActivity.this, ImagesArray, mediaList, true, true);
     }
 
     // region NFC Initialization
@@ -281,7 +365,7 @@ public class AdDisplayActivity extends AppCompatActivity {
             @Override
             public void run() {
                 if (appClass.isAWSConnected) {
-//                    subscribeToContentResponse(TOPIC_CONTENT_RESPONSE);
+                    subscribeToContentResponse(TOPIC_CONTENT_RESPONSE); //Uncommented
                     publishMsg(TOPIC_CONTENT_REQUEST, "");
                 }
             }
@@ -297,9 +381,11 @@ public class AdDisplayActivity extends AppCompatActivity {
         Log.d(TAG, "----- content count: " + mediaList.size());
 
         ImagesArray.add(Uri.parse(getFilesDir().getAbsolutePath() + "/content/ncellimage.jpg"));
-        mediaContentAdapter = new MediaContentAdapter(this, ImagesArray, mediaList);
+
+        mediaContentAdapter = new MediaContentAdapter(this, AdDisplayActivity.this, ImagesArray, mediaList, true, false);
         mPager.setAdapter(mediaContentAdapter);
         NUM_PAGES = mediaList.size();
+
     }
 
     private void populateMedia(String contentData) {
@@ -347,6 +433,15 @@ public class AdDisplayActivity extends AppCompatActivity {
         }
     }
 
+    public void videoPause() {
+        View myView = mPager.findViewWithTag(mPager.getCurrentItem());
+        PlayerView playerView = myView.findViewById(R.id.pvVideo);
+        Player player = playerView.getPlayer();
+        assert player != null;
+        player.seekTo(0);
+        player.setPlayWhenReady(false);
+    }
+
     /**
      * Method to swipe the viewpager content automatically at the given interval of the contents.
      *
@@ -361,11 +456,17 @@ public class AdDisplayActivity extends AppCompatActivity {
                     final Handler handler = new Handler(Looper.getMainLooper());
                     final Runnable Update = new Runnable() {
                         public void run() {
+
+                            Log.i(TAG, "currentPage: TotalPage: " + NUM_PAGES);
+
                             if (currentPage == NUM_PAGES - 1) {
                                 currentPage = 0;
-                            } else {
+                            } /*else if (currentPage == 0) {
+                                Log.d(TAG, "currentPage: First Page");
+                            }*/ else {
                                 currentPage++;
                             }
+
                             mPager.setCurrentItem(currentPage, true);
                             Log.d(TAG, "currentPage: --- " + currentPage);
                         }
@@ -381,7 +482,6 @@ public class AdDisplayActivity extends AppCompatActivity {
                                 Log.d(TAG, "current interval: " + mediaList.get(mPager.getCurrentItem()).Interval);
 
                                 handler.post(Update);
-
                                 count = 0;
                             }
                         }
@@ -395,6 +495,41 @@ public class AdDisplayActivity extends AppCompatActivity {
             default:
                 break;
         }
+    }
+
+    @Override
+    public void onVideoEnds(boolean atVideoState, boolean isEnd) {
+        isVideoPlaying = atVideoState;
+
+        // Helps to detect whether is page is auto scrolled or scrolled by an user
+       /* mPager.addOnPageChangeListener(new ViewPager.OnPageChangeListener() {
+            @Override
+            public void onPageScrolled(int position, float positionOffset, int positionOffsetPixels) {
+                Log.i("ScrollState", "OnScrolled - " + atVideoState);
+            }
+
+            @Override
+            public void onPageSelected(int position) {
+
+            }
+
+            @Override
+            public void onPageScrollStateChanged(int state) {
+                Log.i("ScrollState", "OnAutoScrolled - " + atVideoState);
+            }
+        });*/
+
+//        Disabling autoScroll when Video plays
+        if (atVideoState) {
+            Log.i("Show Video State", "atVideoPlayer");
+            mPager.setCurrentItem(currentPage, false);
+            lotteLayout.setVisibility(View.GONE);
+        } else {
+            Log.i("Show Video State", "atImageView");
+            mPager.setCurrentItem(currentPage, true);
+            mPager.setCurrentItem(currentPage, false);
+        }
+
     }
 
     class DownloadThread extends Thread {

@@ -114,7 +114,7 @@ public class SettingsActivity extends AppCompatActivity implements OnItemClickLi
 
         // Wifi RecyclerView Section
         populateWifiList(wifiList);
-        adapter = new WifiListAdapter(this,this, wifiList);
+        adapter = new WifiListAdapter(this, this, wifiList);
         rvWifi.setAdapter(adapter);
 
         rvWifi.scrollToPosition(0);
@@ -241,7 +241,16 @@ public class SettingsActivity extends AppCompatActivity implements OnItemClickLi
         Bundle args = new Bundle();
         args.putParcelable(WifiConfigFragment.ARG_PARAM1, scanResult);
 
-        DialogFragment dialogFragment = new WifiConfigFragment(this);
+        String SSID = null;
+        WifiManager mWifiManager = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
+        assert mWifiManager != null;
+        WifiInfo wifiInfo = mWifiManager.getConnectionInfo();
+        if (wifiInfo.getSupplicantState() == SupplicantState.COMPLETED) {
+            SSID = String.valueOf(wifiInfo.getSSID());
+            SSID = SSID.substring(1, SSID.length() - 1);
+        }
+
+        DialogFragment dialogFragment = new WifiConfigFragment(this, wifiList, SSID);
         dialogFragment.setArguments(args);
         dialogFragment.show(ft, "dialog");
     }

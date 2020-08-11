@@ -1,8 +1,8 @@
 package np.com.bottle.podapp.adapter;
 
+import android.app.Activity;
 import android.content.Context;
 import android.net.Uri;
-import android.os.Environment;
 import android.os.Parcelable;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -13,6 +13,7 @@ import android.widget.ImageView;
 import androidx.annotation.NonNull;
 import androidx.viewpager.widget.PagerAdapter;
 
+import com.google.android.exoplayer2.ExoPlaybackException;
 import com.google.android.exoplayer2.ExoPlayerFactory;
 import com.google.android.exoplayer2.Player;
 import com.google.android.exoplayer2.SimpleExoPlayer;
@@ -32,16 +33,41 @@ public class MediaContentAdapter extends PagerAdapter {
 
     private static String TAG = MediaContentAdapter.class.getSimpleName();
 
+    private Activity activity;
+    private OnVideoEndListener listener;
+    private boolean onPageScrollStateChanged;
+    private boolean isAtVideoPlayer;
+    private boolean onActivityPaused;
+    private SimpleExoPlayer player;
+    private PlayerView playerView;
     private ArrayList<Uri> IMAGES;
     private LayoutInflater inflater;
     private Context context;
     private List<Media> mediaList;
 
-    public MediaContentAdapter(Context context, ArrayList<Uri> IMAGES, List<Media> mediaList) {
+    public MediaContentAdapter(Context context, OnVideoEndListener onVideoEndListener, ArrayList<Uri> IMAGES, List<Media> mediaList, boolean scrollStateChange, boolean activityPaused) {
+        this.activity = (Activity) context;
         this.context = context;
         this.IMAGES = IMAGES;
+        this.listener = onVideoEndListener;
         inflater = LayoutInflater.from(context);
         this.mediaList = mediaList;
+        this.onPageScrollStateChanged = scrollStateChange;
+        this.onActivityPaused = activityPaused;
+
+        /*if (onActivityPaused) {
+            Log.i("AdActivityState", "I'm here");
+            player = ExoPlayerFactory.newSimpleInstance(context);
+            stopVideoPlayer();
+
+            *//*player.setPlayWhenReady(false);
+            player.stop();
+            player.seekTo(0);*//*
+        }*/
+    }
+
+    public interface OnVideoEndListener {
+        void onVideoEnds(boolean atVideoPlayerState, boolean isEnd);
     }
 
     @Override
@@ -62,21 +88,64 @@ public class MediaContentAdapter extends PagerAdapter {
 
         assert mediaLayout != null;
         ImageView imageView = mediaLayout.findViewById(R.id.ivImage);
-        PlayerView playerView = mediaLayout.findViewById(R.id.pvVideo);
+        playerView = mediaLayout.findViewById(R.id.pvVideo);
 
-        if(mediaList.get(position).MediaType.equals(Media.MEDIA_TYPE_IMAGE)) {
+        player = ExoPlayerFactory.newSimpleInstance(context);
+        MediaSource mediaSource = buildMediaSource(mediaList.get(position).MediaUri);
+
+        if (mediaList.get(position).MediaType.equals(Media.MEDIA_TYPE_IMAGE)) {
 //            imageView.setImageURI(IMAGES.get(position));
             imageView.setImageURI(mediaList.get(position).MediaUri);
             imageView.setVisibility(View.VISIBLE);
-        } else {
-            SimpleExoPlayer player = ExoPlayerFactory.newSimpleInstance(context);
-            MediaSource mediaSource = buildMediaSource(mediaList.get(position).MediaUri);
 
+            listener.onVideoEnds(false, false);
+
+            Log.i("Scroll state", onPageScrollStateChanged + "");
+            if (onPageScrollStateChanged) {
+                player.prepare(mediaSource);
+                isAtVideoPlayer = false;
+                stopVideoPlayer();
+            }
+
+        } else {
+
+            Log.i("Scroll state", onPageScrollStateChanged + "");
             player.prepare(mediaSource);
             player.setPlayWhenReady(true);
-            player.setRepeatMode(Player.REPEAT_MODE_ONE);
             playerView.setPlayer(player);
             playerView.setVisibility(View.VISIBLE);
+
+//            isAtVideoPlayer = true;
+//            stopVideoPlayer();
+
+           /* if (!onPageScrollStateChanged) {
+                isAtVideoPlayer = true;
+                stopVideoPlayer();
+            }*/
+
+            player.addListener(new Player.EventListener() {
+                @Override
+                public void onPlayerStateChanged(boolean playWhenReady, int playbackState) {
+                    switch (playbackState) {
+
+                        case Player.STATE_IDLE:
+                        case Player.STATE_ENDED: {
+                            setPlayWhenReady(false);
+                            listener.onVideoEnds(true, true); //Notify AdDisplayActivity that video has end
+                        }
+                        break;
+                        case Player.STATE_BUFFERING:
+                            break;
+                        case Player.STATE_READY:
+                            break;
+                    }
+                }
+
+                @Override
+                public void onPlayerError(ExoPlaybackException error) {
+                    playerView.onPause();
+                }
+            });
         }
 
 //        SimpleExoPlayer player = ExoPlayerFactory.newSimpleInstance(context);
@@ -89,9 +158,8 @@ public class MediaContentAdapter extends PagerAdapter {
 //        playerView.setVisibility(View.VISIBLE);
 //
 //        playerView.setPlayer(player);
-
+        mediaLayout.setTag(position);
         view.addView(mediaLayout, 0);
-
         return mediaLayout;
     }
 
@@ -116,7 +184,66 @@ public class MediaContentAdapter extends PagerAdapter {
 
     private MediaSource buildMediaSource(Uri uri) {
         DataSource.Factory dataSourceFactory = new DefaultDataSourceFactory(context, "exoplayer-codelab");
-
         return new ProgressiveMediaSource.Factory(dataSourceFactory).createMediaSource(uri);
     }
+
+    private void setPlayWhenReady(boolean playWhenReady) {
+        player.setPlayWhenReady(playWhenReady);
+    }
+
+    public void stopVideoPlayer() {
+        Thread thread = new Thread() {
+            @Override
+            public void run() {
+                try {
+                    Thread.sleep(500);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+
+                activity.runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+
+                        player = ExoPlayerFactory.newSimpleInstance(context);
+
+                        if (!isAtVideoPlayer) {
+                            setPlayWhenReady(false);
+
+                            if (onActivityPaused) {
+                                Log.i("AdActivity", "Yeah this is here");
+                            }
+
+                            player.addListener(new Player.DefaultEventListener() {
+                                @Override
+                                public void onPlayerStateChanged(boolean playWhenReady, int playbackState) {
+                                    if (playWhenReady && playbackState == Player.STATE_READY) {
+                                        // media actually playing
+                                    } else if (playWhenReady) {
+                                        // might be idle (plays after prepare()),
+                                        // buffering (plays when data available)
+                                        // or ended (plays when seek away from end)
+                                    } else {
+                                        // player paused in any state
+                                        player.setPlayWhenReady(false);
+                                        player.getPlaybackState();
+                                        player.stop();
+                                        player.seekTo(0);
+                                    }
+                                }
+                            });
+
+                            playerView.onPause();
+                            player.setPlayWhenReady(false);
+                            player.getPlaybackState();
+                            player.stop();
+                            player.seekTo(0);
+                        }
+                    }
+                });
+            }
+        };
+        thread.start(); //start the thread
+    }
+
 }

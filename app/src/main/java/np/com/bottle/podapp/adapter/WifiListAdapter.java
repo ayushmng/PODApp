@@ -11,6 +11,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -60,12 +61,22 @@ public class WifiListAdapter extends RecyclerView.Adapter<WifiListAdapter.ViewHo
             ssid = ssid.substring(1, ssid.length() - 1);
         }
 
-        Log.i("ShowSSID", ssid);
-        if (scanResult.SSID.contains(ssid)) {
+        /*if (scanResult.SSID.contains(ssid)) {
             position = 0;
         }
-
         if (position == 0) {
+            holder.tvConnect.setText("Connected");
+            holder.tvConnect.setTypeface(Typeface.DEFAULT_BOLD);
+            holder.tvConnect.setTextColor(ContextCompat.getColor(context, R.color.green));
+        } else {
+            holder.tvConnect.setText("Connect");
+            holder.tvConnect.setTypeface(Typeface.DEFAULT);
+            holder.tvConnect.setTextColor(ContextCompat.getColor(context, R.color.blue));
+        }*/
+
+        Log.i("ShowSSID", ssid);
+        if (scanResults.get(position).toString().contains(ssid)) {
+            Log.i("ShowSSID", ssid);
             holder.tvConnect.setText("Connected");
             holder.tvConnect.setTypeface(Typeface.DEFAULT_BOLD);
             holder.tvConnect.setTextColor(ContextCompat.getColor(context, R.color.green));
@@ -76,12 +87,28 @@ public class WifiListAdapter extends RecyclerView.Adapter<WifiListAdapter.ViewHo
         }
 
         int level = WifiManager.calculateSignalLevel(scanResults.get(position).level, 5);
-        holder.tvSsid.setText(scanResult.SSID + " (" + level + ") ");
+        holder.tvSsid.setText(scanResult.SSID);
 
+        if (level == 0 || level == 1) {
+            holder.wifiStrength.setBackgroundResource(R.drawable.ic_low_strength);
+        }
+
+        if (level == 2 || level == 3) {
+            holder.wifiStrength.setBackgroundResource(R.drawable.ic_average_strength);
+        }
+
+        if (level == 4 || level == 5) {
+            holder.wifiStrength.setBackgroundResource(R.drawable.ic_full_strength);
+        }
+
+        String finalSsid = ssid;
         holder.itemView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                clickListener.onItemClicked(scanResult);
+                // Disallowing to the connected wifi
+                if (!scanResults.get(position).toString().contains(finalSsid)) {
+                    clickListener.onItemClicked(scanResult);
+                }
             }
         });
     }
@@ -104,12 +131,14 @@ public class WifiListAdapter extends RecyclerView.Adapter<WifiListAdapter.ViewHo
     public class ViewHolder extends RecyclerView.ViewHolder {
 
         ConstraintLayout constraintLayout;
+        ImageView wifiStrength;
         TextView tvSsid, tvConnect;
 
         public ViewHolder(@NonNull View itemView) {
             super(itemView);
 
             constraintLayout = itemView.findViewById(R.id.constraint_layout);
+            wifiStrength = itemView.findViewById(R.id.wifi_strength);
             tvSsid = itemView.findViewById(R.id.tvSsid);
             tvConnect = itemView.findViewById(R.id.tv_connect);
         }
