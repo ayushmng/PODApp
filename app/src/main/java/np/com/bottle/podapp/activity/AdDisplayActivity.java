@@ -1,5 +1,8 @@
 package np.com.bottle.podapp.activity;
 
+import android.annotation.SuppressLint;
+import android.app.AlarmManager;
+import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -9,6 +12,7 @@ import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.nfc.NfcAdapter;
 import android.os.Bundle;
+import android.os.CountDownTimer;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
@@ -44,7 +48,10 @@ import org.json.JSONObject;
 
 import java.io.File;
 import java.nio.charset.StandardCharsets;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.List;
 import java.util.Objects;
 import java.util.Random;
@@ -63,6 +70,7 @@ import np.com.bottle.podapp.nfc.KeyInfoProvider;
 import np.com.bottle.podapp.nfc.NfcAppKeys;
 import np.com.bottle.podapp.nfc.NfcFileType;
 import np.com.bottle.podapp.services.ContentDownloadIntentService;
+import np.com.bottle.podapp.services.DeviceHealthService;
 import np.com.bottle.podapp.util.Constants;
 import np.com.bottle.podapp.util.Helper;
 
@@ -76,10 +84,16 @@ public class AdDisplayActivity extends AppCompatActivity implements MediaContent
     private long longPressTime;
     private Context context;
 
+    //TimeSlot
+    Calendar calendar;
+    AlarmManager alarmMgr;
+    PendingIntent alarmIntent;
+    BroadcastReceiver alarmReceiver;
+
     //AdView
     private boolean isVideoPlaying = false;
-    private boolean pageScrolled;
-    private final static int INTERVAL = 1000 * 2; //10 secs
+    private String dayOfTheWeek;
+    private final static int INTERVAL = 1000 * 5; //10 secs
     private final static int INTERVAL2 = 1000 * 60; //1 min
 
     // NFC
@@ -99,10 +113,14 @@ public class AdDisplayActivity extends AppCompatActivity implements MediaContent
     private static int NUM_PAGES = 0;
     private ArrayList<Uri> ImagesArray = new ArrayList<>();
     private List<Media> mediaList;
+
+    private List<String> timeSlotList;
+    int timerCount = -1;
+
     private MediaContentAdapter mediaContentAdapter;
     private Timer mediaChangeTimer = new Timer();
-    ;
     private int count = 0;
+    private int tempCount = 0;
 
     /*
      * Initialize content date so as to not make it null.
@@ -113,6 +131,7 @@ public class AdDisplayActivity extends AppCompatActivity implements MediaContent
     // Device Health
     Timer healthTimer = new Timer();
 
+    @SuppressLint("ClickableViewAccessibility")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -128,26 +147,91 @@ public class AdDisplayActivity extends AppCompatActivity implements MediaContent
         mqttManager = appClass.getMqttManager();
 
         mediaList = new ArrayList<>();
+        timeSlotList = new ArrayList<>();
 
         mPager = findViewById(R.id.vpAdContent);
+        //Disables scrolling behaviour
+        /*mPager.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View view, MotionEvent motionEvent) {
+                return true;
+            }
+        });*/
+
+        @SuppressLint("SimpleDateFormat") SimpleDateFormat sdf = new SimpleDateFormat("EEEE");
+        Date d = new Date();
+        dayOfTheWeek = sdf.format(d);
 
         checkDirectory();
         initializedLibrary();
         initializeKeys();
         initializeMedia();
-        deviceMetrics();
+//        deviceMetrics();
+//        setTimeSlot(10, 58);
 
-        mPager.setVisibility(View.GONE);
-        handleAdViews();
+        lotteLayout.setVisibility(View.GONE);
+        mPager.setVisibility(View.VISIBLE);
+//        handleAdViews();
+    }
+
+    private void setTimeSlot(String time, int duration) {
+
+        // Set the alarm to start at provided time frame
+        calendar = Calendar.getInstance();
+        calendar.set(Calendar.HOUR_OF_DAY, Integer.parseInt(time.substring(0, 2)));
+        calendar.set(Calendar.MINUTE, Integer.parseInt(time.substring(3, 5)));
+        calendar.set(Calendar.MINUTE, 0);
+
+        registerMyAlarmBroadcast(duration);
+        alarmMgr.setExact(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), alarmIntent);
+//        alarmMgr.setRepeating(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(),
+//                AlarmManager.INTERVAL_DAY, alarmIntent);
+
+//        alarmMgr.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), alarmIntent);
+    }
+
+    private void registerMyAlarmBroadcast(int duration) {
+        //Calls when alarm time reached
+        alarmReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                new CountDownTimer((1000 * 60 * duration), (1000 * 60 * duration) / 2) {
+                    public void onTick(long millisUntilFinished) {
+                        Log.i(TAG, "Timer Starts : " + millisUntilFinished);
+                    }
+
+                    public void onFinish() {
+                        Log.i(TAG, "Timer Completed");
+                        timerCount++;
+                        if (timerCount < timeSlotList.size()) {
+                            String startingTime = timeSlotList.get(timerCount);
+                            String time = startingTime.substring(0, 5);
+                            Log.i(TAG, "Timer duration: " + time);
+                            setTimeSlot(time, 1);
+                        }
+                    }
+                }.start();
+            }
+        };
+
+        registerReceiver(alarmReceiver, new IntentFilter(ContentDownloadIntentService.NOTIFICATION));
+        alarmIntent = PendingIntent.getBroadcast(this, 0, new Intent(ContentDownloadIntentService.NOTIFICATION), 0);
+        alarmMgr = (AlarmManager) (this.getSystemService(Context.ALARM_SERVICE));
+    }
+
+    private void UnregisterAlarmBroadcast() {
+        alarmMgr.cancel(alarmIntent);
+        getBaseContext().unregisterReceiver(alarmReceiver);
     }
 
     private void handleAdViews() {
         // Helps to display Lotte animation at first for 10sec
-        if (!isVideoPlaying) {
-            Thread thread = new Thread() {
+
+            /*Thread thread = new Thread() {
                 @Override
                 public void run() {
                     try {
+                        mediaLoop(Constants.MEDIALOOPSTATUS.STOP);
                         Thread.sleep(INTERVAL);
                     } catch (InterruptedException e) {
                         e.printStackTrace();
@@ -163,16 +247,15 @@ public class AdDisplayActivity extends AppCompatActivity implements MediaContent
                     });
                 }
             };
-            thread.start();
-        }
+            thread.start();*/
 
         // Displays ad view for 1min and animation for 10sec
         final Handler handler = new Handler();
         handler.postDelayed(new Runnable() {
             public void run() {
 
-                mPager.setVisibility(View.GONE);
-                lotteLayout.setVisibility(View.VISIBLE);
+//                mPager.setVisibility(View.GONE);
+//                lotteLayout.setVisibility(View.VISIBLE);
 
                 Log.i("Show Timer", "Timer starts");
                 handler.postDelayed(this, INTERVAL2);
@@ -181,6 +264,7 @@ public class AdDisplayActivity extends AppCompatActivity implements MediaContent
                     @Override
                     public void run() {
                         try {
+                            mediaLoop(Constants.MEDIALOOPSTATUS.STOP);
                             Thread.sleep(INTERVAL);
                         } catch (InterruptedException e) {
                             e.printStackTrace();
@@ -190,8 +274,11 @@ public class AdDisplayActivity extends AppCompatActivity implements MediaContent
                             @Override
                             public void run() {
                                 Log.i("Show Timer", "Thread starts");
-                                mPager.setVisibility(View.VISIBLE);
+                                /*mPager.setVisibility(View.VISIBLE);
                                 lotteLayout.setVisibility(View.GONE);
+                                mediaLoop(Constants.MEDIALOOPSTATUS.START);*/
+                                startService(new Intent(getApplicationContext(), DeviceHealthService.class));
+//                                mPager.setCurrentItem(currentPage, true);
                             }
                         });
                     }
@@ -215,10 +302,8 @@ public class AdDisplayActivity extends AppCompatActivity implements MediaContent
         unregisterReceiver(receiver);
         mediaLoop(Constants.MEDIALOOPSTATUS.STOP);
         healthTimer.cancel();
-//        mediaContentAdapter = new MediaContentAdapter(this, AdDisplayActivity.this, ImagesArray, mediaList, true, true);
-//        mediaContentAdapter.stopVideoPlayer();
         videoPause();
-        Log.i(TAG, "I'm here...Ad");
+        Log.i(TAG, "Activity Paused");
     }
 
     @Override
@@ -226,8 +311,8 @@ public class AdDisplayActivity extends AppCompatActivity implements MediaContent
         super.onDestroy();
         unregisterReceiver(receiver);
         mediaLoop(Constants.MEDIALOOPSTATUS.STOP);
-        Log.i(TAG, "I'm here...Ad");
         videoPause();
+        Log.i(TAG, "Activity Destroyed");
 //        mediaContentAdapter = new MediaContentAdapter(this, AdDisplayActivity.this, ImagesArray, mediaList, true, true);
     }
 
@@ -325,10 +410,15 @@ public class AdDisplayActivity extends AppCompatActivity implements MediaContent
             //TODO: Check this line
 //            showPaymentDialog(strName, strCardNumber);
 
-            Intent intent = new Intent(this, EntranceVerificationActivity.class);
-            intent.putExtra(Name, strName);
-            intent.putExtra(CardNumber, strCardNumber);
-            startActivity(intent);
+            if (Constants.IS_ENTRANCE_VERIFICATION) {
+                Intent intent = new Intent(this, EntranceVerificationActivity.class);
+                intent.putExtra(Name, strName);
+                intent.putExtra(CardNumber, strCardNumber);
+                startActivity(intent);
+            } else {
+                showPinCodeDialog(1);
+            }
+
 
         } catch (Exception e) {
             Log.e(TAG, "Auth Fail");
@@ -365,7 +455,7 @@ public class AdDisplayActivity extends AppCompatActivity implements MediaContent
             @Override
             public void run() {
                 if (appClass.isAWSConnected) {
-                    subscribeToContentResponse(TOPIC_CONTENT_RESPONSE); //Uncommented
+                    subscribeToContentResponse(TOPIC_CONTENT_RESPONSE);
                     publishMsg(TOPIC_CONTENT_REQUEST, "");
                 }
             }
@@ -382,9 +472,23 @@ public class AdDisplayActivity extends AppCompatActivity implements MediaContent
 
         ImagesArray.add(Uri.parse(getFilesDir().getAbsolutePath() + "/content/ncellimage.jpg"));
 
-        mediaContentAdapter = new MediaContentAdapter(this, AdDisplayActivity.this, ImagesArray, mediaList, true, false);
+        mediaContentAdapter = new MediaContentAdapter(this, AdDisplayActivity.this, ImagesArray, mediaList);
         mPager.setAdapter(mediaContentAdapter);
         NUM_PAGES = mediaList.size();
+
+        //------------------------------------------------------------//
+
+        timeSlotList.add("16:47 - 15:53");
+        timeSlotList.add("16:49 - 15:47");
+        timeSlotList.add("16:51 - 15:50");
+
+        timerCount++;
+        if (timerCount < timeSlotList.size()) {
+            String startingTime = timeSlotList.get(timerCount);
+            String time = startingTime.substring(0, 5);
+            Log.i(TAG, "Timer duration: " + time);
+            setTimeSlot(time, 1);
+        }
 
     }
 
@@ -403,19 +507,40 @@ public class AdDisplayActivity extends AppCompatActivity implements MediaContent
 
             for (int i = 0; i < jaData.length(); i++) {
                 JSONArray jaContents = jaData.getJSONObject(i).getJSONArray("contents");
+                JSONArray jTimeSlot = jaData.getJSONObject(i).getJSONArray("time_slot");
 
                 for (int j = 0; j < jaContents.length(); j++) {
                     JSONObject jContent = jaContents.getJSONObject(j);
                     Log.d(TAG, "Level: " + i + " ---- " + "Name: " + jContent.getString("name"));
 
                     mediaList.add(new Media(
-                            Uri.parse(getFilesDir().getAbsolutePath() + "/content/" + jContent.getString("name") + "." + jContent.getString("extension")),
+                            Uri.parse(getFilesDir().getAbsolutePath() + "/content/" + dayOfTheWeek + "/" + jContent.getString("name") + "." + jContent.getString("extension")),
                             jContent.getInt("interval"),
                             jContent.getString("type"),
                             jaData.getJSONObject(i).getInt("level")
                     ));
                 }
+
+                //Adds timeSlot from JSON data
+                /*for (int k = 0; k < jTimeSlot.length(); k++) {
+                    timeSlotList.add(jTimeSlot.getString(k));
+                }*/
             }
+
+            /*String startingTime = timeSlotList.get(0);
+//            int duration = startingTime.charAt(timeSlotList.size() - 1) - startingTime.charAt(0);
+//            Log.i(TAG, "Duration: " + duration);
+//            setTimeSlot(Integer.parseInt(startingTime), duration);
+
+            int time = Integer.parseInt(startingTime.substring(1, 5));
+            Log.i(TAG, "Time duration: " + time);
+            setTimeSlot(time, 1);
+
+            String startingTime = timeSlotList.get(0);
+            String time = startingTime.substring(0, 5);
+            Log.i(TAG, "Time duration: " + time);
+            setTimeSlot(time, 1);*/
+
         } catch (JSONException e) {
             Log.e(TAG, "Error in parsing JSON data.");
         } catch (Exception ex) {
@@ -424,12 +549,42 @@ public class AdDisplayActivity extends AppCompatActivity implements MediaContent
     }
 
     private void checkDirectory() {
-        File dir = new File(getFilesDir().getAbsolutePath(), "content");
-        if (!dir.exists()) {
-            dir.mkdirs();
-            Log.d(TAG, "Directory Created");
-        } else {
-            Log.d(TAG, "Directory Exists");
+
+        ArrayList<String> daysList = new ArrayList<>();
+        daysList.add("Sunday");
+        daysList.add("Monday");
+        daysList.add("Tuesday");
+        daysList.add("Wednesday");
+        daysList.add("Thursday");
+        daysList.add("Friday");
+        daysList.add("Saturday");
+
+        //Creating directories with 7 days name
+        File dir;
+        for (int i = 0; i < 7; i++) {
+            dir = new File(getFilesDir().getAbsolutePath(), "content/" + daysList.get(i));
+            if (!dir.exists()) {
+                dir.mkdirs();
+                Log.d(TAG, "Directory Created");
+            } else {
+                Log.d(TAG, "Directory Exists");
+            }
+        }
+
+        // Clearing other days directory media items
+        File dirToDelete;
+        for (String dayDirectory : daysList) {
+            if (!dayDirectory.equals(dayOfTheWeek)) {
+                dirToDelete = new File(getFilesDir().getAbsolutePath(), "content/" + dayDirectory);
+                if (dirToDelete.isDirectory()) {
+                    String[] children = dirToDelete.list();
+                    assert children != null;
+                    for (int i = 0; i < children.length; i++) {
+                        new File(dirToDelete, children[i]).delete();
+                        Log.i("File Name", children[i]);
+                    }
+                }
+            }
         }
     }
 
@@ -437,9 +592,12 @@ public class AdDisplayActivity extends AppCompatActivity implements MediaContent
         View myView = mPager.findViewWithTag(mPager.getCurrentItem());
         PlayerView playerView = myView.findViewById(R.id.pvVideo);
         Player player = playerView.getPlayer();
-        assert player != null;
-        player.seekTo(0);
-        player.setPlayWhenReady(false);
+        if (player != null) {
+            playerView.onPause();
+            player.stop();
+            player.seekTo(0);
+            player.setPlayWhenReady(false);
+        }
     }
 
     /**
@@ -452,21 +610,17 @@ public class AdDisplayActivity extends AppCompatActivity implements MediaContent
             case START:
                 if (NUM_PAGES > 0) {
                     mediaChangeTimer = new Timer();
+                    mPager.setCurrentItem(currentPage, true);
 
                     final Handler handler = new Handler(Looper.getMainLooper());
                     final Runnable Update = new Runnable() {
                         public void run() {
-
                             Log.i(TAG, "currentPage: TotalPage: " + NUM_PAGES);
-
                             if (currentPage == NUM_PAGES - 1) {
                                 currentPage = 0;
-                            } /*else if (currentPage == 0) {
-                                Log.d(TAG, "currentPage: First Page");
-                            }*/ else {
+                            } else {
                                 currentPage++;
                             }
-
                             mPager.setCurrentItem(currentPage, true);
                             Log.d(TAG, "currentPage: --- " + currentPage);
                         }
@@ -481,8 +635,10 @@ public class AdDisplayActivity extends AppCompatActivity implements MediaContent
                                 Log.d(TAG, "current page: " + mPager.getCurrentItem());
                                 Log.d(TAG, "current interval: " + mediaList.get(mPager.getCurrentItem()).Interval);
 
-                                handler.post(Update);
-                                count = 0;
+                                if (!isVideoPlaying) {
+                                    handler.post(Update);
+                                    count = 0;
+                                }
                             }
                         }
                     }, 1000, 1000);
@@ -497,8 +653,80 @@ public class AdDisplayActivity extends AppCompatActivity implements MediaContent
         }
     }
 
+   /* private void mediaLoop(Constants.MEDIALOOPSTATUS medialoopstatus) {
+        switch (medialoopstatus) {
+            case START:
+                if (NUM_PAGES > 0) {
+                    mediaChangeTimer = new Timer();
+
+                    final Handler handler = new Handler(Looper.getMainLooper());
+                    final Runnable Update = new Runnable() {
+                        public void run() {
+
+                            Log.i(TAG, "Media: TotalPage: " + NUM_PAGES);
+
+                            if (currentPage >= NUM_PAGES - 1) {
+                                currentPage = 0;
+                            } else if (currentPage == 0) {
+                                Log.d(TAG, "currentPage: First Page");
+                            } else {
+                                currentPage++;
+                                Log.d(TAG, "Media: page added: " + currentPage);
+                            }
+
+                            mPager.setCurrentItem(currentPage, true);
+                            Log.d(TAG, "Media: changed Page: --- " + currentPage);
+                        }
+                    };
+
+                    mediaChangeTimer.schedule(new TimerTask() {
+                        @Override
+                        public void run() {
+                            tempCount++;
+//                            tempCount = 0; // temp
+
+                            if (tempCount >= (INTERVAL2 / 1000) && tempCount <= ((INTERVAL2 / 1000) + 10)) {
+                                runOnUiThread(() -> {
+                                    lotteLayout.setVisibility(View.VISIBLE);
+                                    mPager.setVisibility(View.GONE);
+                                    if (mediaList.get(mPager.getCurrentItem()).MediaType.equals(Media.MEDIA_TYPE_VIDEO)) {
+                                        videoPause();
+                                    }
+                                });
+                                if (tempCount >= ((INTERVAL2 / 1000) + 10)) {
+                                    tempCount = 0;
+                                }
+                            } else {
+                                count++;
+                                Log.d(TAG, "Media: count: " + count);
+
+                                runOnUiThread(() -> {
+                                    lotteLayout.setVisibility(View.GONE);
+                                    mPager.setVisibility(View.VISIBLE);
+                                });
+                                if (count >= mediaList.get(mPager.getCurrentItem()).Interval) {
+                                    Log.d(TAG, "Media: current page: " + mPager.getCurrentItem());
+                                    Log.d(TAG, "Media: current interval: " + mediaList.get(mPager.getCurrentItem()).Interval);
+
+                                    handler.post(Update);
+                                    count = 0;
+                                }
+                            }
+                        }
+                    }, 1000, 1000);
+                }
+                break;
+            case STOP:
+                mediaChangeTimer.cancel();
+                break;
+
+            default:
+                break;
+        }
+    }*/
+
     @Override
-    public void onVideoEnds(boolean atVideoState, boolean isEnd) {
+    public void onVideoEnds(boolean atVideoState, boolean isVideoEnd) {
         isVideoPlaying = atVideoState;
 
         // Helps to detect whether is page is auto scrolled or scrolled by an user
@@ -520,15 +748,20 @@ public class AdDisplayActivity extends AppCompatActivity implements MediaContent
         });*/
 
 //        Disabling autoScroll when Video plays
-        if (atVideoState) {
-            Log.i("Show Video State", "atVideoPlayer");
+        /*if (atVideoState) {
+            Log.i("Show Video State", "atVideoPlayer : " + isEnd);
             mPager.setCurrentItem(currentPage, false);
             lotteLayout.setVisibility(View.GONE);
         } else {
-            Log.i("Show Video State", "atImageView");
+            Log.i("Show Video State", "atImageView : " + isEnd);
             mPager.setCurrentItem(currentPage, true);
             mPager.setCurrentItem(currentPage, false);
-        }
+        } */
+
+        /*if (isVideoEnd) {
+//            mediaLoop(Constants.MEDIALOOPSTATUS.START);
+            mPager.setCurrentItem(currentPage, true);
+        }*/
 
     }
 
@@ -555,6 +788,7 @@ public class AdDisplayActivity extends AppCompatActivity implements MediaContent
 
                     mediaLoop(Constants.MEDIALOOPSTATUS.STOP);
                     startService(intent);
+
                 } else {
                     runOnUiThread(new Runnable() {
                         @Override
@@ -589,7 +823,6 @@ public class AdDisplayActivity extends AppCompatActivity implements MediaContent
                             Log.d(TAG, "topic: " + topic);
                             String strData = new String(data, StandardCharsets.UTF_8);
                             Log.d(TAG, "Message: " + strData);
-
 //                            switch (topic) {
 //                                case TOPIC_CONTENT_RESPONSE:
 //                                    break;
@@ -622,7 +855,6 @@ public class AdDisplayActivity extends AppCompatActivity implements MediaContent
             Log.e(TAG, "Error in Subscribing to Topic.");
         }
     }
-
 
     // endregion
 
@@ -657,8 +889,10 @@ public class AdDisplayActivity extends AppCompatActivity implements MediaContent
 
     // endregion
 
-    // Todo: Device metrics [CPU usage, temperature, RAM usage] need to be implemented.
+    // Device Health
     public void deviceMetrics() {
+
+        // Todo: Device metrics [CPU usage, temperature, RAM usage] need to be implemented.
         TimerTask healthTimerTask = new TimerTask() {
             @Override
             public void run() {
@@ -703,7 +937,7 @@ public class AdDisplayActivity extends AppCompatActivity implements MediaContent
             case MotionEvent.ACTION_UP:
                 if (((Long) System.currentTimeMillis() - longPressTime) > 3000) {
                     Log.d(TAG, "------------------------------ ACTION_UP");
-                    showPinCodeDialog();
+                    showPinCodeDialog(0);
 //                    startActivity(new Intent(getApplicationContext(), SettingsActivity.class));
                     return true;
                 }
@@ -712,8 +946,13 @@ public class AdDisplayActivity extends AppCompatActivity implements MediaContent
         return super.dispatchTouchEvent(event);
     }
 
+    /**
+     * Note: int value 1 -> takes to Payment Processing
+     * whereas, value 0 -> takes to Settings Activity
+     */
+
     // Displays PinCode Dialog box
-    private void showPinCodeDialog() {
+    private void showPinCodeDialog(int value) {
         FragmentTransaction ft = getSupportFragmentManager().beginTransaction();
         Fragment fragment = getSupportFragmentManager().findFragmentByTag("dialog");
         if (fragment != null) {
@@ -722,10 +961,10 @@ public class AdDisplayActivity extends AppCompatActivity implements MediaContent
         ft.addToBackStack(null);
 
         Bundle args = new Bundle();
-//        args.putString("activity", "ad");
+//        args.putString("name", name);
 //        args.putInt("cardNumber", cardNumber);
 
-        EnterPinFragment dialogFragment = new EnterPinFragment(0);
+        EnterPinFragment dialogFragment = new EnterPinFragment(value);
         dialogFragment.setArguments(args);
         dialogFragment.show(ft, "dialog");
     }

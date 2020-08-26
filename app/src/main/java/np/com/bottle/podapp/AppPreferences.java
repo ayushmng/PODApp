@@ -27,6 +27,7 @@ public class AppPreferences {
     public final static String IS_PROVISIONED = "provision_status";
     public final static String IS_KIOSK_MODE = "kiosk_status";
 
+
     public AppPreferences(Context context) {
         preferences = context.getSharedPreferences(APP_PREFERENCES_FILE_NAME, Context.MODE_PRIVATE);
     }

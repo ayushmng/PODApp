@@ -38,4 +38,5 @@
     <string name="your_card_is_processing">Your card is processing</string>
     <string name="powered_by">Powered By</string>
     <string name="scan_your_card_here">Scan Your Card Here</string>
+    <string name="entrance_verification">Entrance Verification</string>
 </resources>

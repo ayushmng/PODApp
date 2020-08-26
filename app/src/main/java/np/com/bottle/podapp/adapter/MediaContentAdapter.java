@@ -1,6 +1,5 @@
 package np.com.bottle.podapp.adapter;
 
-import android.app.Activity;
 import android.content.Context;
 import android.net.Uri;
 import android.os.Parcelable;
@@ -33,11 +32,7 @@ public class MediaContentAdapter extends PagerAdapter {
 
     private static String TAG = MediaContentAdapter.class.getSimpleName();
 
-    private Activity activity;
     private OnVideoEndListener listener;
-    private boolean onPageScrollStateChanged;
-    private boolean isAtVideoPlayer;
-    private boolean onActivityPaused;
     private SimpleExoPlayer player;
     private PlayerView playerView;
     private ArrayList<Uri> IMAGES;
@@ -45,29 +40,16 @@ public class MediaContentAdapter extends PagerAdapter {
     private Context context;
     private List<Media> mediaList;
 
-    public MediaContentAdapter(Context context, OnVideoEndListener onVideoEndListener, ArrayList<Uri> IMAGES, List<Media> mediaList, boolean scrollStateChange, boolean activityPaused) {
-        this.activity = (Activity) context;
+    public MediaContentAdapter(Context context, OnVideoEndListener onVideoEndListener, ArrayList<Uri> IMAGES, List<Media> mediaList) {
         this.context = context;
         this.IMAGES = IMAGES;
         this.listener = onVideoEndListener;
         inflater = LayoutInflater.from(context);
         this.mediaList = mediaList;
-        this.onPageScrollStateChanged = scrollStateChange;
-        this.onActivityPaused = activityPaused;
-
-        /*if (onActivityPaused) {
-            Log.i("AdActivityState", "I'm here");
-            player = ExoPlayerFactory.newSimpleInstance(context);
-            stopVideoPlayer();
-
-            *//*player.setPlayWhenReady(false);
-            player.stop();
-            player.seekTo(0);*//*
-        }*/
     }
 
     public interface OnVideoEndListener {
-        void onVideoEnds(boolean atVideoPlayerState, boolean isEnd);
+        void onVideoEnds(boolean atVideoPlayerState, boolean isVideoEnd);
     }
 
     @Override
@@ -93,35 +75,24 @@ public class MediaContentAdapter extends PagerAdapter {
         player = ExoPlayerFactory.newSimpleInstance(context);
         MediaSource mediaSource = buildMediaSource(mediaList.get(position).MediaUri);
 
+        Log.i(TAG, "Media Type: "+ mediaList.get(position).MediaType);
+
         if (mediaList.get(position).MediaType.equals(Media.MEDIA_TYPE_IMAGE)) {
 //            imageView.setImageURI(IMAGES.get(position));
             imageView.setImageURI(mediaList.get(position).MediaUri);
             imageView.setVisibility(View.VISIBLE);
 
+            playerView.setVisibility(View.GONE);
             listener.onVideoEnds(false, false);
-
-            Log.i("Scroll state", onPageScrollStateChanged + "");
-            if (onPageScrollStateChanged) {
-                player.prepare(mediaSource);
-                isAtVideoPlayer = false;
-                stopVideoPlayer();
-            }
+//            player.prepare(mediaSource);
 
         } else {
 
-            Log.i("Scroll state", onPageScrollStateChanged + "");
             player.prepare(mediaSource);
             player.setPlayWhenReady(true);
             playerView.setPlayer(player);
             playerView.setVisibility(View.VISIBLE);
-
-//            isAtVideoPlayer = true;
-//            stopVideoPlayer();
-
-           /* if (!onPageScrollStateChanged) {
-                isAtVideoPlayer = true;
-                stopVideoPlayer();
-            }*/
+            listener.onVideoEnds(true, false);
 
             player.addListener(new Player.EventListener() {
                 @Override
@@ -189,61 +160,6 @@ public class MediaContentAdapter extends PagerAdapter {
 
     private void setPlayWhenReady(boolean playWhenReady) {
         player.setPlayWhenReady(playWhenReady);
-    }
-
-    public void stopVideoPlayer() {
-        Thread thread = new Thread() {
-            @Override
-            public void run() {
-                try {
-                    Thread.sleep(500);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-
-                activity.runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-
-                        player = ExoPlayerFactory.newSimpleInstance(context);
-
-                        if (!isAtVideoPlayer) {
-                            setPlayWhenReady(false);
-
-                            if (onActivityPaused) {
-                                Log.i("AdActivity", "Yeah this is here");
-                            }
-
-                            player.addListener(new Player.DefaultEventListener() {
-                                @Override
-                                public void onPlayerStateChanged(boolean playWhenReady, int playbackState) {
-                                    if (playWhenReady && playbackState == Player.STATE_READY) {
-                                        // media actually playing
-                                    } else if (playWhenReady) {
-                                        // might be idle (plays after prepare()),
-                                        // buffering (plays when data available)
-                                        // or ended (plays when seek away from end)
-                                    } else {
-                                        // player paused in any state
-                                        player.setPlayWhenReady(false);
-                                        player.getPlaybackState();
-                                        player.stop();
-                                        player.seekTo(0);
-                                    }
-                                }
-                            });
-
-                            playerView.onPause();
-                            player.setPlayWhenReady(false);
-                            player.getPlaybackState();
-                            player.stop();
-                            player.seekTo(0);
-                        }
-                    }
-                });
-            }
-        };
-        thread.start(); //start the thread
     }
 
 }

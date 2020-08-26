@@ -11,6 +11,8 @@ import org.json.JSONObject;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -142,8 +144,9 @@ public class Helper {
                 }
                 return new String(mBuffer, 0, i);
             }
-        } catch (java.io.FileNotFoundException e) {
-        } catch (java.io.IOException e) {
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
         } finally {
             if (is != null) {
                 try {

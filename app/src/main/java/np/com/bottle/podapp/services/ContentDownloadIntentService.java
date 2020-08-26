@@ -1,5 +1,6 @@
 package np.com.bottle.podapp.services;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.IntentService;
 import android.content.Intent;
@@ -16,12 +17,15 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.URL;
 import java.net.URLConnection;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 /**
  * An {@link IntentService} subclass for handling asynchronous task requests in
  * a service on a separate handler thread.
  * helper methods.
  */
+
 public class ContentDownloadIntentService extends IntentService {
 
     private static String TAG = ContentDownloadIntentService.class.getSimpleName();
@@ -83,7 +87,11 @@ public class ContentDownloadIntentService extends IntentService {
         stream.readFully(buffer);
         stream.close();
 
-        File dataFile = new File(getFilesDir().getAbsolutePath() + "/content/" + fileName);
+        @SuppressLint("SimpleDateFormat") SimpleDateFormat sdf = new SimpleDateFormat("EEEE");
+        Date d = new Date();
+        String dayOfTheWeek = sdf.format(d);
+
+        File dataFile = new File(getFilesDir().getAbsolutePath() + "/content/" + dayOfTheWeek + "/" + fileName);
 
         DataOutputStream fos = new DataOutputStream(new FileOutputStream(dataFile));
         fos.write(buffer);

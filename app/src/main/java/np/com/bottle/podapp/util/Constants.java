@@ -1,5 +1,7 @@
 package np.com.bottle.podapp.util;
 
+import java.util.ArrayList;
+
 public class Constants {
     public static final String SUCCESS = "success";
     public static final String KEYSTORE_NAME = "bottle_pod_keystore";
@@ -28,10 +30,14 @@ public class Constants {
     public static String TOPIC_CONTENT_SUB;
     public static String TOPIC_ANDROID_SUB;
 
-
     public static final int PERMISSIONS_REQUEST_CODE = 1240;
 
     public static final int ITEMS_PER_PAGE = 6;
+
+    public static boolean IS_START = false;
+
+    // Identifies Card Recognition for Entrance or Payment
+    public static boolean IS_ENTRANCE_VERIFICATION = false;
 
     public static void constructTopic(String orgId, String deviceId) {
         TOPIC_ACTIVATE_PUB = STAGE + "/data/activation/type/pub/device/" + deviceId;

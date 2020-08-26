@@ -17,6 +17,7 @@ import java.util.List;
 
 import np.com.bottle.podapp.AppPreferences;
 import np.com.bottle.podapp.R;
+import np.com.bottle.podapp.services.DeviceHealthService;
 import np.com.bottle.podapp.util.Constants;
 
 public class SplashScreenActivity extends AppCompatActivity {
@@ -54,6 +55,7 @@ public class SplashScreenActivity extends AppCompatActivity {
     }
 
     public void initApp() {
+        startService(new Intent(getApplicationContext(), DeviceHealthService.class));
         if (appPref.getBoolean(AppPreferences.IS_PROVISIONED)) {
             startActivity(new Intent(getApplicationContext(), AdDisplayActivity.class));
         } else {
@@ -106,4 +108,5 @@ public class SplashScreenActivity extends AppCompatActivity {
             finish();
         }
     }
+
 }

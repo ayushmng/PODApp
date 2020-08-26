@@ -1,6 +1,7 @@
 package np.com.bottle.podapp.activity;
 
 import android.annotation.SuppressLint;
+import android.content.Intent;
 import android.os.Bundle;
 import android.util.TypedValue;
 import android.view.View;
@@ -148,7 +149,9 @@ public class EntranceVerificationActivity extends AppCompatActivity {
                 buttonText.setText("CONFIRM");
                 backButton.setVisibility(View.VISIBLE);
             } else {
-                showPinCodeDialog();
+//                showPinCodeDialog();
+                //TODO: Save the visitors value in Preference or push to API
+                onBackPressed();
             }
         }
     };
@@ -168,20 +171,4 @@ public class EntranceVerificationActivity extends AppCompatActivity {
         }
     };
 
-    private void showPinCodeDialog() {
-        FragmentTransaction ft = getSupportFragmentManager().beginTransaction();
-        Fragment fragment = getSupportFragmentManager().findFragmentByTag("dialog");
-        if (fragment != null) {
-            ft.remove(fragment);
-        }
-        ft.addToBackStack(null);
-
-        Bundle args = new Bundle();
-//        args.putString("name", name);
-//        args.putInt("cardNumber", cardNumber);
-
-        EnterPinFragment dialogFragment = new EnterPinFragment(1);
-        dialogFragment.setArguments(args);
-        dialogFragment.show(ft, "dialog");
-    }
 }

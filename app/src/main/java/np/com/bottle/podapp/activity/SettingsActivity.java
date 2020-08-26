@@ -57,7 +57,7 @@ public class SettingsActivity extends AppCompatActivity implements OnItemClickLi
 
     private RecyclerView rvWifi;
     private RecyclerView rvDeviceDetails;
-    private SwitchCompat swKiosk;
+    private SwitchCompat swKiosk, isEntranceVerification;
     private Button btnClearContent;
     private ImageButton close;
 
@@ -100,6 +100,7 @@ public class SettingsActivity extends AppCompatActivity implements OnItemClickLi
         rvWifi = findViewById(R.id.rvWifi);
         rvDeviceDetails = findViewById(R.id.rvDeviceDetails);
         swKiosk = findViewById(R.id.swKiosk);
+        isEntranceVerification = findViewById(R.id.sc_entrance_verification);
         btnClearContent = findViewById(R.id.btnClearContent);
         close = findViewById(R.id.close_button);
         viewPager = findViewById(R.id.view_pager);
@@ -129,6 +130,20 @@ public class SettingsActivity extends AppCompatActivity implements OnItemClickLi
         if (appClass.isAWSConnected) {
             subscribeToAndroidCommand();
         }
+
+        if (Constants.IS_ENTRANCE_VERIFICATION) {
+            isEntranceVerification.setChecked(true);
+        } else {
+            isEntranceVerification.setChecked(false);
+        }
+
+        isEntranceVerification.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                // Switch identification for Payment/Entrance Card
+                Constants.IS_ENTRANCE_VERIFICATION = isEntranceVerification.isChecked();
+            }
+        });
 
         swKiosk.setChecked(appPref.getBoolean(AppPreferences.IS_KIOSK_MODE));
 
