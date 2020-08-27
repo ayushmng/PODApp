@@ -107,7 +107,6 @@ public class AlarmActivity extends AppCompatActivity implements AlarmReceiver.My
     }
 
     public void countDownTimer() {
-
         if (Constants.IS_START) {
             timeSlotList = new ArrayList<>();
             new CountDownTimer((1000 * 60 * duration), (1000 * 60 * duration) / 2) {
