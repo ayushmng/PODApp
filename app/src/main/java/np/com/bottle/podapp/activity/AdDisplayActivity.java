@@ -109,7 +109,8 @@ public class AdDisplayActivity extends AppCompatActivity implements MediaContent
     private final String TOPIC_CONTENT_REQUEST = Constants.TOPIC_CONTENT_PUB;
 
     private ViewPager mPager;
-    private static int currentPage = 0;
+    private static int currentPage;
+//    private static int currentPage = 0;
     private static int NUM_PAGES = 0;
     private ArrayList<Uri> ImagesArray = new ArrayList<>();
     private List<Media> mediaList;
@@ -293,7 +294,7 @@ public class AdDisplayActivity extends AppCompatActivity implements MediaContent
         super.onResume();
         libInstance.startForeGroundDispatch();
         registerReceiver(receiver, new IntentFilter(ContentDownloadIntentService.NOTIFICATION));
-        mediaLoop(Constants.MEDIALOOPSTATUS.START);
+//        mediaLoop(Constants.MEDIALOOPSTATUS.START);
     }
 
     @Override
@@ -610,12 +611,11 @@ public class AdDisplayActivity extends AppCompatActivity implements MediaContent
             case START:
                 if (NUM_PAGES > 0) {
                     mediaChangeTimer = new Timer();
-                    mPager.setCurrentItem(currentPage, true);
 
                     final Handler handler = new Handler(Looper.getMainLooper());
                     final Runnable Update = new Runnable() {
                         public void run() {
-                            Log.i(TAG, "currentPage: TotalPage: " + NUM_PAGES);
+
                             if (currentPage == NUM_PAGES - 1) {
                                 currentPage = 0;
                             } else {
@@ -725,12 +725,12 @@ public class AdDisplayActivity extends AppCompatActivity implements MediaContent
         }
     }*/
 
-    @Override
+    /*@Override
     public void onVideoEnds(boolean atVideoState, boolean isVideoEnd) {
         isVideoPlaying = atVideoState;
 
         // Helps to detect whether is page is auto scrolled or scrolled by an user
-       /* mPager.addOnPageChangeListener(new ViewPager.OnPageChangeListener() {
+       *//* mPager.addOnPageChangeListener(new ViewPager.OnPageChangeListener() {
             @Override
             public void onPageScrolled(int position, float positionOffset, int positionOffsetPixels) {
                 Log.i("ScrollState", "OnScrolled - " + atVideoState);
@@ -745,10 +745,10 @@ public class AdDisplayActivity extends AppCompatActivity implements MediaContent
             public void onPageScrollStateChanged(int state) {
                 Log.i("ScrollState", "OnAutoScrolled - " + atVideoState);
             }
-        });*/
+        });*//*
 
 //        Disabling autoScroll when Video plays
-        /*if (atVideoState) {
+        *//*if (atVideoState) {
             Log.i("Show Video State", "atVideoPlayer : " + isEnd);
             mPager.setCurrentItem(currentPage, false);
             lotteLayout.setVisibility(View.GONE);
@@ -756,14 +756,19 @@ public class AdDisplayActivity extends AppCompatActivity implements MediaContent
             Log.i("Show Video State", "atImageView : " + isEnd);
             mPager.setCurrentItem(currentPage, true);
             mPager.setCurrentItem(currentPage, false);
-        } */
+        } *//*
 
-        /*if (isVideoEnd) {
+        *//*if (isVideoEnd) {
 //            mediaLoop(Constants.MEDIALOOPSTATUS.START);
             mPager.setCurrentItem(currentPage, true);
-        }*/
+        }*//*
 
     }
+
+    @Override
+    public void onCurrentPagePos(int pos) {
+        currentPage = pos;
+    }*/
 
     class DownloadThread extends Thread {
         String strPayload;

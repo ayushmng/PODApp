@@ -43,23 +43,24 @@ public class MediaContentAdapter extends PagerAdapter {
     public MediaContentAdapter(Context context, OnVideoEndListener onVideoEndListener, ArrayList<Uri> IMAGES, List<Media> mediaList) {
         this.context = context;
         this.IMAGES = IMAGES;
-        this.listener = onVideoEndListener;
+//        this.listener = onVideoEndListener;
         inflater = LayoutInflater.from(context);
         this.mediaList = mediaList;
     }
 
     public interface OnVideoEndListener {
-        void onVideoEnds(boolean atVideoPlayerState, boolean isVideoEnd);
-    }
-
-    @Override
-    public void destroyItem(ViewGroup container, int position, @NonNull Object object) {
-        container.removeView((View) object);
+//        void onVideoEnds(boolean atVideoPlayerState, boolean isVideoEnd);
+//        void onCurrentPagePos(int pos);
     }
 
     @Override
     public int getCount() {
         return mediaList.size();
+    }
+
+    @Override
+    public boolean isViewFromObject(@NonNull View view, @NonNull Object object) {
+        return view.equals(object);
     }
 
     @NonNull
@@ -68,6 +69,9 @@ public class MediaContentAdapter extends PagerAdapter {
 
         View mediaLayout = inflater.inflate(R.layout.media_content_layout, view, false);
 
+//        listener.onCurrentPagePos(position);
+        Log.i(TAG, "currentPageFromAdapter: " + position);
+
         assert mediaLayout != null;
         ImageView imageView = mediaLayout.findViewById(R.id.ivImage);
         playerView = mediaLayout.findViewById(R.id.pvVideo);
@@ -75,7 +79,7 @@ public class MediaContentAdapter extends PagerAdapter {
         player = ExoPlayerFactory.newSimpleInstance(context);
         MediaSource mediaSource = buildMediaSource(mediaList.get(position).MediaUri);
 
-        Log.i(TAG, "Media Type: "+ mediaList.get(position).MediaType);
+        Log.i(TAG, "Media Type: " + mediaList.get(position).MediaType);
 
         if (mediaList.get(position).MediaType.equals(Media.MEDIA_TYPE_IMAGE)) {
 //            imageView.setImageURI(IMAGES.get(position));
@@ -83,7 +87,7 @@ public class MediaContentAdapter extends PagerAdapter {
             imageView.setVisibility(View.VISIBLE);
 
             playerView.setVisibility(View.GONE);
-            listener.onVideoEnds(false, false);
+//            listener.onVideoEnds(false, false);
 //            player.prepare(mediaSource);
 
         } else {
@@ -92,9 +96,9 @@ public class MediaContentAdapter extends PagerAdapter {
             player.setPlayWhenReady(true);
             playerView.setPlayer(player);
             playerView.setVisibility(View.VISIBLE);
-            listener.onVideoEnds(true, false);
+//            listener.onVideoEnds(true, false);
 
-            player.addListener(new Player.EventListener() {
+            /*player.addListener(new Player.EventListener() {
                 @Override
                 public void onPlayerStateChanged(boolean playWhenReady, int playbackState) {
                     switch (playbackState) {
@@ -106,7 +110,6 @@ public class MediaContentAdapter extends PagerAdapter {
                         }
                         break;
                         case Player.STATE_BUFFERING:
-                            break;
                         case Player.STATE_READY:
                             break;
                     }
@@ -116,7 +119,7 @@ public class MediaContentAdapter extends PagerAdapter {
                 public void onPlayerError(ExoPlaybackException error) {
                     playerView.onPause();
                 }
-            });
+            });*/
         }
 
 //        SimpleExoPlayer player = ExoPlayerFactory.newSimpleInstance(context);
@@ -135,22 +138,17 @@ public class MediaContentAdapter extends PagerAdapter {
     }
 
     @Override
-    public boolean isViewFromObject(@NonNull View view, @NonNull Object object) {
-        return view.equals(object);
-    }
+    public void restoreState(Parcelable state, ClassLoader loader) {}
 
     @Override
-    public void restoreState(Parcelable state, ClassLoader loader) {
-    }
+    public Parcelable saveState() { return null; }
 
     @Override
-    public Parcelable saveState() {
-        return null;
-    }
+    public int getItemPosition(Object object) { return 0; }
 
     @Override
-    public int getItemPosition(Object object) {
-        return 0;
+    public void destroyItem(ViewGroup container, int position, @NonNull Object object) {
+        container.removeView((View) object);
     }
 
     private MediaSource buildMediaSource(Uri uri) {

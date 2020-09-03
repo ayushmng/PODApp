@@ -34,8 +34,6 @@ public class Constants {
 
     public static final int ITEMS_PER_PAGE = 6;
 
-    public static boolean IS_START = false;
-
     // Identifies Card Recognition for Entrance or Payment
     public static boolean IS_ENTRANCE_VERIFICATION = false;
 

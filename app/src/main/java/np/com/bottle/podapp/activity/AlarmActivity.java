@@ -5,8 +5,10 @@ import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.os.Bundle;
 import android.os.CountDownTimer;
+import android.os.Handler;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -17,8 +19,8 @@ import java.util.Calendar;
 import java.util.List;
 
 import np.com.bottle.podapp.R;
+import np.com.bottle.podapp.services.ContentDownloadIntentService;
 import np.com.bottle.podapp.util.AlarmReceiver;
-import np.com.bottle.podapp.util.Constants;
 
 public class AlarmActivity extends AppCompatActivity implements AlarmReceiver.MyCustomInterface {
 
@@ -30,9 +32,12 @@ public class AlarmActivity extends AppCompatActivity implements AlarmReceiver.My
     List<String> timeSlotList;
     Calendar calendar;
     AlarmManager alarmMgr;
+    AlarmManager alarmManager;
     AlarmReceiver receiver;
     PendingIntent alarmIntent;
+    PendingIntent myPendingIntent;
     BroadcastReceiver alarmReceiver;
+    BroadcastReceiver myBroadcastReceiver;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -41,14 +46,12 @@ public class AlarmActivity extends AppCompatActivity implements AlarmReceiver.My
 
         receiver = new AlarmReceiver();
         receiver.AlarmReceiver(this);
+
         timeSlotList = new ArrayList<>();
-        timeSlotList.add("11:29 - 15:53");
-        timeSlotList.add("11:31 - 15:47");
-        timeSlotList.add("11:33 - 15:50");
+        timeSlotList.add("16:18");
+        timeSlotList.add("16:20");
+        timeSlotList.add("16:21");
         loopTimer();
-        if (Constants.IS_START) {
-            loopTimer();
-        }
     }
 
     private void startAlarm(Calendar c) {
@@ -68,7 +71,9 @@ public class AlarmActivity extends AppCompatActivity implements AlarmReceiver.My
         calendar.set(Calendar.HOUR_OF_DAY, Integer.parseInt(time.substring(0, 2)));
         calendar.set(Calendar.MINUTE, Integer.parseInt(time.substring(3, 5)));
         calendar.set(Calendar.SECOND, 0);
-        startAlarm(calendar);
+//        startAlarm(calendar);
+        registerMyAlarmBroadcast();
+        alarmManager.set(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), myPendingIntent);
     }
 
     private void loopTimer() {
@@ -76,10 +81,51 @@ public class AlarmActivity extends AppCompatActivity implements AlarmReceiver.My
         if (timerCount < timeSlotList.size()) {
             String startingTime = timeSlotList.get(timerCount);
             String time = startingTime.substring(0, 5);
-            Log.i(TAG, "Time duration: " + time);
 
+            Log.i(TAG, "Timer slot: " + time);
             setTimeSlot(time);
         }
+    }
+
+    private void registerMyAlarmBroadcast() {
+        myBroadcastReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                Log.i(TAG, "BroadcastReceiver::OnReceive()");
+                int dur = (1000 * 60 * duration);
+
+                final Handler handler = new Handler();
+                handler.postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        Log.i(TAG, "Timer Started");
+                        loopTimer();
+                    }
+                }, dur);
+
+                /*new CountDownTimer((1000 * 60 * duration), (1000 * 60 * duration)) {
+                    public void onTick(long millisUntilFinished) {
+                        Log.i(TAG, "Timer Starts : " + millisUntilFinished);
+                    }
+
+                    public void onFinish() {
+                        Log.i(TAG, "Timer Completed");
+                        timerCount++;
+                        if (timerCount < timeSlotList.size()) {
+                            String startingTime = timeSlotList.get(timerCount);
+                            String time = startingTime.substring(0, 5);
+                            Log.i(TAG, "Next Timer : " + time);
+                            setTimeSlot(time);
+                        }
+                    }
+                }.start();*/
+
+            }
+        };
+
+        registerReceiver(myBroadcastReceiver, new IntentFilter(ContentDownloadIntentService.NOTIFICATION));
+        myPendingIntent = PendingIntent.getBroadcast(this, 0, new Intent(ContentDownloadIntentService.NOTIFICATION), 0);
+        alarmManager = (AlarmManager) (this.getSystemService(Context.ALARM_SERVICE));
     }
 
     private void registerMyAlarmBroadcast(int duration) {
@@ -106,31 +152,10 @@ public class AlarmActivity extends AppCompatActivity implements AlarmReceiver.My
         };
     }
 
-    public void countDownTimer() {
-        if (Constants.IS_START) {
-            timeSlotList = new ArrayList<>();
-            new CountDownTimer((1000 * 60 * duration), (1000 * 60 * duration) / 2) {
-                public void onTick(long millisUntilFinished) {
-                    Log.i(TAG, "Timer Starts");
-                }
-
-                public void onFinish() {
-                    Log.i(TAG, "Timer Completed");
-                    loopTimer();
-                }
-            }.start();
-        }
-    }
-
     @Override
     public void sendData(Boolean onFinish) {
         Log.i(TAG, "Here is boolean: " + onFinish);
         Toast.makeText(this, "Boolean: " + onFinish, Toast.LENGTH_SHORT).show();
     }
 
-    @Override
-    protected void onResume() {
-        super.onResume();
-//        registerReceiver(BroadcastReceiver broadcastReceiver, new IntentFilter(ContentDownloadIntentService.NOTIFICATION));
-    }
 }

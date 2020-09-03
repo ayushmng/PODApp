@@ -5,6 +5,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.util.Log;
 
+import java.util.List;
+
 public class AlarmReceiver extends BroadcastReceiver {
 
     public interface MyCustomInterface {
@@ -12,6 +14,11 @@ public class AlarmReceiver extends BroadcastReceiver {
     }
 
     private MyCustomInterface myCustomInterface;
+    int timerCount = 0;
+    List<String> timeSlotList;
+
+    public AlarmReceiver() {
+    }
 
     public void AlarmReceiver(Context context) {
         this.myCustomInterface = (MyCustomInterface) context;
@@ -22,10 +29,9 @@ public class AlarmReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
         Log.i(TAG, "Timer starts");
-        Constants.IS_START = true;
-
         /*if (myCustomInterface != null) {
             myCustomInterface.sendData(true);
         }*/
     }
+
 }
