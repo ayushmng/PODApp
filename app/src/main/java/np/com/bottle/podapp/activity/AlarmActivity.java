@@ -6,6 +6,8 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.hardware.Sensor;
+import android.hardware.SensorManager;
 import android.net.TrafficStats;
 import android.os.Bundle;
 import android.os.CountDownTimer;
@@ -46,8 +48,12 @@ public class AlarmActivity extends AppCompatActivity implements AlarmReceiver.My
 
     //Device Health Test
     String downlink, uplink;
-    long mStartRX = 0;
-    long mStartTX = 0;
+    long mStartRX;
+    long mStartTX;
+
+    private SensorManager mSensorManager;
+    private Sensor mTemperature;
+    private final static String NOT_SUPPORTED_MESSAGE = "Sorry, sensor not available for this device.";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -56,6 +62,9 @@ public class AlarmActivity extends AppCompatActivity implements AlarmReceiver.My
 
         receiver = new AlarmReceiver();
         receiver.AlarmReceiver(this);
+
+        mStartRX = TrafficStats.getTotalRxBytes();
+        mStartTX = TrafficStats.getTotalTxBytes();
 
         timeSlotList = new ArrayList<>();
         timeSlotList.add("16:18");
@@ -70,17 +79,31 @@ public class AlarmActivity extends AppCompatActivity implements AlarmReceiver.My
                 @Override
                 public void run() {
 
-                    long rxBytes = (TrafficStats.getTotalRxBytes() - mStartRX) / (1024 * 1024);
+                    long rxBytes = (TrafficStats.getTotalRxBytes() - mStartRX) / 1024;
                     downlink = Long.toString(rxBytes);
 
-                    long txBytes = (TrafficStats.getTotalTxBytes() - mStartTX) / (1024 * 1024);
+                    if (downlink.length() >= 4) {
+                        float mbps = (float) rxBytes / 1024;
+                        downlink = (String.valueOf(mbps)).substring(0, 4) + "mbps";
+                    } else {
+                        downlink = downlink + "kbps";
+                    }
+
+                    long txBytes = (TrafficStats.getTotalTxBytes() - mStartTX) / 1024;
                     uplink = Long.toString(txBytes);
 
-                    Log.i(TAG, "UploadSpeed: " + uplink + "mbps DownloadSpeed: " + downlink + "mbps");
-                    Log.i(TAG, "Temperature: " + cpuTemperature());
+                    if (uplink.length() >= 4) {
+                        float mbps = (float) txBytes / 1024;
+                        uplink = (String.valueOf(mbps)).substring(0, 4) + "mbps";
+                    } else {
+                        uplink = uplink + "kbps";
+                    }
 
                     mStartRX = TrafficStats.getTotalRxBytes();
                     mStartTX = TrafficStats.getTotalTxBytes();
+
+                    Log.i(TAG, "UploadSpeed: " + uplink + " DownloadSpeed: " + downlink);
+                    Log.i(TAG, "Temperature: " + cpuTemperature());
 
                 }
             };

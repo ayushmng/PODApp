@@ -26,10 +26,10 @@
         android:theme="@style/BaseTheme"
         tools:replace="android:allowBackup">
         <activity android:name=".activity.AlarmActivity">
-            <intent-filter>
+           <!-- <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
+            </intent-filter>-->
         </activity>
         
         <receiver android:name=".util.AlarmReceiver"/>
@@ -59,10 +59,10 @@
         </activity>
         <activity android:name=".activity.ProvisioningActivity" />
         <activity android:name=".activity.SplashScreenActivity">
-            <!--<intent-filter>
+            <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>-->
+            </intent-filter>
         </activity>
         <activity android:name=".activity.MainActivity" />
     </application>

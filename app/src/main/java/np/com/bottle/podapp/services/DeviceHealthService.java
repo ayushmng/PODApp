@@ -27,8 +27,6 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.RandomAccessFile;
 import java.util.ArrayList;
-import java.util.Random;
-import java.util.Timer;
 import java.util.regex.Pattern;
 
 import np.com.bottle.podapp.AppPreferences;
@@ -43,8 +41,8 @@ import retrofit2.Callback;
 
 public class DeviceHealthService extends IntentService {
 
-    private long mStartRX = 0;
-    private long mStartTX = 0;
+    private long mStartRX;
+    private long mStartTX;
 
     private String TAG = "DeviceHealthService";
     private AppPreferences appPref;
@@ -52,9 +50,6 @@ public class DeviceHealthService extends IntentService {
     private static int sLastCpuCoreCount = -1;
     private String deviceId, payloadType, fleetId, freeRam, cpuUsage, cpuTemperature, rssi, uplink, downlink, log, status;
     ArrayList<DeviceHealth> deviceHealthList = new ArrayList<DeviceHealth>();
-
-    // Device Health
-    Timer healthTimer = new Timer();
 
     public DeviceHealthService() {
         super("DeviceHealthService");
@@ -84,11 +79,9 @@ public class DeviceHealthService extends IntentService {
             e.printStackTrace();
         }
 
-        cpuUsage = (new Random().nextInt(85) + 15) + "%"; // Dummy value
-        cpuTemperature = (new Random().nextInt(45)) + "c"; // Dummy value. Float.toString(Helper.getCurrentCPUTemperatureInCelcius())
+        //TODO: Check if both returns same value or not...i.e. the commented section provides temp. in Celcius
+        cpuTemperature = String.valueOf(cpuTemperature()); //Float.toString(Helper.getCurrentCPUTemperatureInCelcius())
         rssi = Integer.toString(wifiInfo.getRssi());
-        uplink = (new Random().nextInt(5) + 1) + "mbps"; // Dummy value
-        downlink = (new Random().nextInt(10) + 1) + "mbps"; // Dummy value
         log = "";
         status = "";
 
@@ -117,6 +110,7 @@ public class DeviceHealthService extends IntentService {
             Toast.makeText(this, "No internet Connection, Please make sure you are connected with internet", Toast.LENGTH_SHORT).show();
         }
 
+        //TODO: Open this commented out section, while sending data to server and store data to database
         /*TimerTask healthTimerTask = new TimerTask() {
             @Override
             public void run() {
@@ -152,24 +146,34 @@ public class DeviceHealthService extends IntentService {
         assert activityManager != null;
         activityManager.getMemoryInfo(mi);
         long availableMegs = mi.availMem / 1048576L;
-        long percentAvail = mi.availMem / mi.totalMem;
-        freeRam = availableMegs + " mb";
+        freeRam = availableMegs + " MB";
 
         for (int i = 0; i < calcCpuCoreCount(); i++) {
             cpuUsage = (takeCurrentCpuFreq(i) + "\n");
         }
 
-        downlink = String.valueOf((TrafficStats.getTotalRxBytes() - mStartRX) / (1024 * 1024));
         mStartRX = TrafficStats.getTotalRxBytes();
-
-        uplink = String.valueOf((TrafficStats.getTotalTxBytes() - mStartTX) / (1024 * 1024));
         mStartTX = TrafficStats.getTotalTxBytes();
 
+        //TODO: Call this method where timerTask is called i.e. while sending value to API and storing to db that is used
+        wifiSpeed();
+
+        /*Timer timer = new Timer();
+        TimerTask timerTask = new TimerTask() {
+            @Override
+            public void run() {
+                wifiSpeed();
+            }
+        };
+        timer.schedule(timerTask, 1000, 1000);*/
+
+        //TODO: The beow log contains String value "cpuUsage" which takes maxCpuUsage in diff. way if the method "maxCpuUsage" fails check with that
+        // and its the only max CPU usage not the desired CPU usage
         Log.i(TAG, "CPU Usage: " + cpuUsage + "Max Cpu Usage: " + maxCpuUsage());
         Log.i(TAG, "Free Ram: " + freeRam);
-        Log.i(TAG, "UploadSpeed: " + uplink + "mbps DownloadSpeed: " + downlink + "mbps");
     }
 
+    //TODO: Check whether this directory works for the real device or not, and also check for temperature directory
     private String maxCpuUsage() throws FileNotFoundException {
         String cpuMaxFreq = "";
         RandomAccessFile reader = new RandomAccessFile("/sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq", "r");
@@ -180,6 +184,57 @@ public class DeviceHealthService extends IntentService {
             e.printStackTrace();
         }
         return cpuMaxFreq;
+    }
+
+    //TODO: Check whether this method returns value for real device or not
+    public static float cpuTemperature() {
+        Process process;
+        try {
+            process = Runtime.getRuntime().exec("cat sys/class/thermal/thermal_zone0/temp");
+            process.waitFor();
+            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+
+            String line = reader.readLine();
+            if (line != null) {
+                float temp = Float.parseFloat(line);
+                return temp / 1000.0f;
+            } else {
+                return 51.0f;
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return 0.0f;
+        }
+    }
+
+    private void wifiSpeed() {
+        if (mStartRX != TrafficStats.UNSUPPORTED || mStartTX != TrafficStats.UNSUPPORTED) {
+
+            long rxBytes = (TrafficStats.getTotalRxBytes() - mStartRX) / 1024;
+            downlink = Long.toString(rxBytes);
+
+            if (downlink.length() >= 4) {
+                float mbps = (float) rxBytes / 1024;
+                downlink = (String.valueOf(mbps)).substring(0, 4) + "mbps";
+            } else {
+                downlink = downlink + "kbps";
+            }
+
+            long txBytes = (TrafficStats.getTotalTxBytes() - mStartTX) / 1024;
+            uplink = Long.toString(txBytes);
+
+            if (uplink.length() >= 4) {
+                float mbps = (float) txBytes / 1024;
+                uplink = (String.valueOf(mbps)).substring(0, 4) + "mbps";
+            } else {
+                uplink = uplink + "kbps";
+            }
+
+            mStartRX = TrafficStats.getTotalRxBytes();
+            mStartTX = TrafficStats.getTotalTxBytes();
+
+            Log.i(TAG, "UploadSpeed: " + uplink + " DownloadSpeed: " + downlink);
+        }
     }
 
     /*public static int[] getCPUFrequencyCurrent() throws Exception {
