@@ -6,6 +6,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.net.TrafficStats;
 import android.os.Bundle;
 import android.os.CountDownTimer;
 import android.os.Handler;
@@ -14,9 +15,13 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import np.com.bottle.podapp.R;
 import np.com.bottle.podapp.services.ContentDownloadIntentService;
@@ -39,6 +44,11 @@ public class AlarmActivity extends AppCompatActivity implements AlarmReceiver.My
     BroadcastReceiver alarmReceiver;
     BroadcastReceiver myBroadcastReceiver;
 
+    //Device Health Test
+    String downlink, uplink;
+    long mStartRX;
+    long mStartTX;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -52,6 +62,51 @@ public class AlarmActivity extends AppCompatActivity implements AlarmReceiver.My
         timeSlotList.add("16:20");
         timeSlotList.add("16:21");
         loopTimer();
+
+        if (mStartRX != TrafficStats.UNSUPPORTED || mStartTX != TrafficStats.UNSUPPORTED) {
+
+            Timer timer = new Timer();
+            TimerTask timerTask = new TimerTask() {
+                @Override
+                public void run() {
+
+                    long rxBytes = (TrafficStats.getTotalRxBytes() - mStartRX) / (1024 * 1024);
+                    long txBytes = (TrafficStats.getTotalTxBytes() - mStartTX) / (1024 * 1024);
+
+                    Log.i(TAG, "UploadSpeed: " + uplink + "mbps DownloadSpeed: " + downlink + "mbps");
+                    Log.i(TAG, "Temperature: " + cpuTemperature());
+
+                    mStartRX = TrafficStats.getTotalRxBytes();
+                    downlink = Long.toString(rxBytes);
+
+                    mStartTX = TrafficStats.getTotalTxBytes();
+                    uplink = Long.toString(txBytes);
+
+                }
+            };
+            timer.schedule(timerTask, 1000, 1000);
+        }
+
+    }
+
+    public static float cpuTemperature() {
+        Process process;
+        try {
+            process = Runtime.getRuntime().exec("cat sys/class/thermal/thermal_zone0/temp");
+            process.waitFor();
+            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+
+            String line = reader.readLine();
+            if (line != null) {
+                float temp = Float.parseFloat(line);
+                return temp / 1000.0f;
+            } else {
+                return 51.0f;
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return 0.0f;
+        }
     }
 
     private void startAlarm(Calendar c) {

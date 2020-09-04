@@ -6,8 +6,6 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.net.ConnectivityManager;
-import android.net.Network;
-import android.net.NetworkCapabilities;
 import android.net.NetworkInfo;
 import android.net.TrafficStats;
 import android.net.wifi.WifiInfo;
@@ -76,23 +74,15 @@ public class DeviceHealthService extends IntentService {
         WifiManager wifiManager = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
         WifiInfo wifiInfo = wifiManager.getConnectionInfo();
 
-        if (wifiInfo != null) {
-            int linkSpeed = wifiInfo.getLinkSpeed();
-            Log.i(TAG, "Wifi Speed: " + linkSpeed);
-        }
-
         deviceId = appPref.getString(AppPreferences.DEVICE_ID);
         payloadType = Constants.PAYLOAD_TYPE_HEALTH;
         fleetId = appPref.getString(AppPreferences.FLEET_ID);
-
-        downloadSpeed();
 
         try {
             getDeviceHealthStatus();
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         }
-//        freeRam = (new Random().nextInt(956) + 128) + "mb"; // Dummy value
 
         cpuUsage = (new Random().nextInt(85) + 15) + "%"; // Dummy value
         cpuTemperature = (new Random().nextInt(45)) + "c"; // Dummy value. Float.toString(Helper.getCurrentCPUTemperatureInCelcius())
@@ -156,47 +146,6 @@ public class DeviceHealthService extends IntentService {
         healthTimer.schedule(healthTimerTask, 1000, 15000);*/
     }
 
-    private void downloadSpeed() {
-
-        ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-        Network[] networks = cm.getAllNetworks();
-
-        for (Network network : networks) {
-            NetworkCapabilities capabilities = cm.getNetworkCapabilities(network);
-            if (capabilities != null) {
-                int linkDownstreamBandwidthKbps = capabilities.getLinkDownstreamBandwidthKbps();
-                int linkUpstreamBandwidthKbps = capabilities.getLinkUpstreamBandwidthKbps();
-                Log.i(TAG, "DownloadSpeed: " + linkDownstreamBandwidthKbps + "  " + linkUpstreamBandwidthKbps);
-            }
-        }
-
-
-        long resetDownload = TrafficStats.getTotalRxBytes();
-        long rxBytes = TrafficStats.getTotalRxBytes() - mStartRX;
-
-        downlink = (Long.toString(rxBytes) + " bytes");
-
-        if (rxBytes >= 1024) {
-
-            long rxKb = rxBytes / 1024;
-            downlink = (Long.toString(rxKb) + " kbps");
-
-            if (rxKb >= 1024) {
-
-                long rxMB = rxKb / 1024;
-                downlink = (Long.toString(rxMB) + " mbps");
-
-                if (rxMB >= 1024) {
-
-                    long rxGB = rxMB / 1024;
-                    downlink = (Long.toString(rxGB) + " gbps");
-                }
-            }
-        }
-
-        mStartRX = resetDownload;
-    }
-
     private void getDeviceHealthStatus() throws FileNotFoundException {
         ActivityManager.MemoryInfo mi = new ActivityManager.MemoryInfo();
         ActivityManager activityManager = (ActivityManager) getApplicationContext().getSystemService(Context.ACTIVITY_SERVICE);
@@ -210,17 +159,15 @@ public class DeviceHealthService extends IntentService {
             cpuUsage = (takeCurrentCpuFreq(i) + "\n");
         }
 
-        /*ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-        assert cm != null;
-        NetworkInfo netInfo = cm.getActiveNetworkInfo();
-        NetworkCapabilities nc = cm.getNetworkCapabilities(cm.getActiveNetwork());
-        assert nc != null;
-        int downSpeed = nc.getLinkDownstreamBandwidthKbps();
-        int upSpeed = nc.getLinkUpstreamBandwidthKbps();*/
+        downlink = String.valueOf((TrafficStats.getTotalRxBytes() - mStartRX) / (1024 * 1024));
+        mStartRX = TrafficStats.getTotalRxBytes();
+
+        uplink = String.valueOf((TrafficStats.getTotalTxBytes() - mStartTX) / (1024 * 1024));
+        mStartTX = TrafficStats.getTotalTxBytes();
 
         Log.i(TAG, "CPU Usage: " + cpuUsage + "Max Cpu Usage: " + maxCpuUsage());
         Log.i(TAG, "Free Ram: " + freeRam);
-//        Log.i(TAG, "UploadSpeed: " + upSpeed + "mbps DownloadSpeed: " + downSpeed + "mbps");
+        Log.i(TAG, "UploadSpeed: " + uplink + "mbps DownloadSpeed: " + downlink + "mbps");
     }
 
     private String maxCpuUsage() throws FileNotFoundException {
