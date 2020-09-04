@@ -46,8 +46,8 @@ public class AlarmActivity extends AppCompatActivity implements AlarmReceiver.My
 
     //Device Health Test
     String downlink, uplink;
-    long mStartRX;
-    long mStartTX;
+    long mStartRX = 0;
+    long mStartTX = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -71,16 +71,16 @@ public class AlarmActivity extends AppCompatActivity implements AlarmReceiver.My
                 public void run() {
 
                     long rxBytes = (TrafficStats.getTotalRxBytes() - mStartRX) / (1024 * 1024);
+                    downlink = Long.toString(rxBytes);
+
                     long txBytes = (TrafficStats.getTotalTxBytes() - mStartTX) / (1024 * 1024);
+                    uplink = Long.toString(txBytes);
 
                     Log.i(TAG, "UploadSpeed: " + uplink + "mbps DownloadSpeed: " + downlink + "mbps");
                     Log.i(TAG, "Temperature: " + cpuTemperature());
 
                     mStartRX = TrafficStats.getTotalRxBytes();
-                    downlink = Long.toString(rxBytes);
-
                     mStartTX = TrafficStats.getTotalTxBytes();
-                    uplink = Long.toString(txBytes);
 
                 }
             };
