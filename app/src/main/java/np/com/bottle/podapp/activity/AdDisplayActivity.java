@@ -138,7 +138,6 @@ public class AdDisplayActivity extends AppCompatActivity implements MediaContent
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_ad_display);
         context = this;
-
 //        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
         lotteLayout = findViewById(R.id.constraint_lotte);
@@ -896,7 +895,6 @@ public class AdDisplayActivity extends AppCompatActivity implements MediaContent
 
     // Device Health
     public void deviceMetrics() {
-
         // Todo: Device metrics [CPU usage, temperature, RAM usage] need to be implemented.
         TimerTask healthTimerTask = new TimerTask() {
             @Override

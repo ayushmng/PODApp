@@ -109,4 +109,22 @@ public class SplashScreenActivity extends AppCompatActivity {
         }
     }
 
+    //TODO: Remove these life cycles while app is set to production
+    @Override
+    protected void onPause() {
+        super.onPause();
+        stopService(new Intent(getApplicationContext(), DeviceHealthService.class));
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        startService(new Intent(getApplicationContext(), DeviceHealthService.class));
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        stopService(new Intent(getApplicationContext(), DeviceHealthService.class));
+    }
 }

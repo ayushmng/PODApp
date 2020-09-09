@@ -27,6 +27,9 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.RandomAccessFile;
 import java.util.ArrayList;
+import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.regex.Pattern;
 
 import np.com.bottle.podapp.AppPreferences;
@@ -73,11 +76,7 @@ public class DeviceHealthService extends IntentService {
         payloadType = Constants.PAYLOAD_TYPE_HEALTH;
         fleetId = appPref.getString(AppPreferences.FLEET_ID);
 
-        try {
-            getDeviceHealthStatus();
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        }
+        getDeviceHealthStatus();
 
         //TODO: Check if both returns same value or not...i.e. the commented section provides temp. in Celcius
         cpuTemperature = String.valueOf(cpuTemperature()); //Float.toString(Helper.getCurrentCPUTemperatureInCelcius())
@@ -140,7 +139,7 @@ public class DeviceHealthService extends IntentService {
         healthTimer.schedule(healthTimerTask, 1000, 15000);*/
     }
 
-    private void getDeviceHealthStatus() throws FileNotFoundException {
+    private void getDeviceHealthStatus() {
         ActivityManager.MemoryInfo mi = new ActivityManager.MemoryInfo();
         ActivityManager activityManager = (ActivityManager) getApplicationContext().getSystemService(Context.ACTIVITY_SERVICE);
         assert activityManager != null;
@@ -148,35 +147,60 @@ public class DeviceHealthService extends IntentService {
         long availableMegs = mi.availMem / 1048576L;
         freeRam = availableMegs + " MB";
 
-        for (int i = 0; i < calcCpuCoreCount(); i++) {
-            cpuUsage = (takeCurrentCpuFreq(i) + "\n");
+        try {
+            totalCpuUsage();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
         }
 
         mStartRX = TrafficStats.getTotalRxBytes();
         mStartTX = TrafficStats.getTotalTxBytes();
 
-        //TODO: Call this method where timerTask is called i.e. while sending value to API and storing to db that is used
-        wifiSpeed();
-
-        /*Timer timer = new Timer();
+        //TODO: call wifiSpeed method in the same timertask used while sending value to API and storing to db, try calling methods on same timertask
+        Timer timer = new Timer();
         TimerTask timerTask = new TimerTask() {
             @Override
             public void run() {
                 wifiSpeed();
             }
         };
-        timer.schedule(timerTask, 1000, 1000);*/
+        timer.schedule(timerTask, 1000, 1000);
 
-        //TODO: The beow log contains String value "cpuUsage" which takes maxCpuUsage in diff. way if the method "maxCpuUsage" fails check with that
+        //TODO: The below log contains String value "cpuUsage" which takes maxCpuUsage in diff. way if the method "maxCpuUsage" fails check with that
         // and its the only max CPU usage not the desired CPU usage
-        Log.i(TAG, "CPU Usage: " + cpuUsage + "Max Cpu Usage: " + maxCpuUsage());
-        Log.i(TAG, "Free Ram: " + freeRam);
+
+        /*//TODO: Check this works for new device or not
+        assert obtainedCPU != null;
+        float cpu_use = (Float.parseFloat(obtainedCPU) / Float.parseFloat(maxCpuUsage())) * 100;
+        cpuUsage = cpu_use + "%";
+        Log.i(TAG, "CPU Usage: " + obtainedCPU + " Max Cpu Usage: " + maxCpuUsage() + " CPU: " + cpuUsage);
+        Log.i(TAG, "Free Ram: " + freeRam);*/
+    }
+
+    private void totalCpuUsage() throws FileNotFoundException {
+        float sum = 0;
+        String obtainedCPU = null;
+        List<Float> cpuCoreList = new ArrayList<Float>();
+
+        for (int i = 0; i < calcCpuCoreCount(); i++) {
+            obtainedCPU = (takeCurrentCpuFreq(i) + "");
+
+            float cpu_use = (Float.parseFloat(obtainedCPU) / Float.parseFloat(maxCpuUsage(i))) * 100;
+            cpuCoreList.add(cpu_use);
+
+            sum += cpuCoreList.get(i);
+            Log.i(TAG, "CPU Usage: " + obtainedCPU + " Max Cpu Usage: " + maxCpuUsage(i));
+        }
+
+        float total_usage = sum / (cpuCoreList.size() * 100) * 100;
+        cpuUsage = String.valueOf(total_usage).substring(0, 5);
+        Log.i(TAG, "Total Cpu Usage: " + cpuUsage + "%");
     }
 
     //TODO: Check whether this directory works for the real device or not, and also check for temperature directory
-    private String maxCpuUsage() throws FileNotFoundException {
+    private String maxCpuUsage(int core) throws FileNotFoundException {
         String cpuMaxFreq = "";
-        RandomAccessFile reader = new RandomAccessFile("/sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq", "r");
+        RandomAccessFile reader = new RandomAccessFile("/sys/devices/system/cpu/cpu" + core + "/cpufreq/cpuinfo_max_freq", "r"); // r -> read
         try {
             cpuMaxFreq = reader.readLine();
             reader.close();
@@ -370,6 +394,7 @@ public class DeviceHealthService extends IntentService {
         });
     }
 
+    //Checks internet connection
     public boolean isConnected(Context context) {
 
         ConnectivityManager cm = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
