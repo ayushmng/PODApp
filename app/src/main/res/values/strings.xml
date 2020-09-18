@@ -31,6 +31,9 @@
     <string name="enter">Enter</string>
     <string name="back">Back</string>
     <string name="invalid_card">Invalid Card</string>
+    <string name="invalid_card_details">Sorry, the card you just scanned is invalid. Please contact POD support.</string>
+    <string name="expired_card">Expired Card</string>
+    <string name="expired_card_details">Sorry, the card you just scanned is expired. Please contact POD support.</string>
     <string name="enter_your_pin_to_continue">Enter Your Pin to Continue</string>
     <string name="enter_pin_to_access_pod_settings">Enter PIN to Access POD Settings</string>
     <string name="clear">CLEAR</string>

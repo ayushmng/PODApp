@@ -1,7 +1,6 @@
 package np.com.bottle.podapp.activity;
 
 import android.annotation.SuppressLint;
-import android.content.Intent;
 import android.os.Bundle;
 import android.util.TypedValue;
 import android.view.View;
@@ -9,21 +8,21 @@ import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.cardview.widget.CardView;
-import androidx.fragment.app.Fragment;
-import androidx.fragment.app.FragmentTransaction;
+import androidx.constraintlayout.widget.ConstraintLayout;
 
 import np.com.bottle.podapp.R;
-import np.com.bottle.podapp.fragment.EnterPinFragment;
+import np.com.bottle.podapp.util.Constants;
 import soup.neumorphism.NeumorphCardView;
 import soup.neumorphism.NeumorphFloatingActionButton;
 import soup.neumorphism.ShapeType;
 
 public class EntranceVerificationActivity extends AppCompatActivity {
 
+    ConstraintLayout invalidDetails, validDetails, validLayout, invalidLayout;
     CardView cardView;
     NeumorphFloatingActionButton incrementBtn, decreaseBtn;
     NeumorphCardView enterButton;
-    TextView numOfVisitors, backButton, buttonText, cardHolderName, cardType, cardNumber, logout;
+    TextView numOfVisitors, backButton, buttonText, cardHolderName, cardType, cardNumber, logout, validityInfo, validityDetails;
 
     String name, number;
     Integer visitors;
@@ -38,6 +37,8 @@ public class EntranceVerificationActivity extends AppCompatActivity {
         number = getIntent().getStringExtra(AdDisplayActivity.CardNumber);
         cardHolderName.setText(name);
         cardNumber.setText(number);
+
+        isCardExpiredOrInvalid();
 
         visitors = Integer.valueOf(numOfVisitors.getText().toString());
         if (visitors == 3) {
@@ -66,6 +67,14 @@ public class EntranceVerificationActivity extends AppCompatActivity {
 
     private void findViewsById() {
 
+        validDetails = findViewById(R.id.active_card_details);
+        invalidDetails = findViewById(R.id.invalid_card_details);
+        validLayout = findViewById(R.id.card_validity_layout);
+        invalidLayout = findViewById(R.id.card_invalidity_layout);
+
+        validityInfo = findViewById(R.id.validity_info);
+        validityDetails = findViewById(R.id.validity_details);
+
         cardView = findViewById(R.id.cardView);
         numOfVisitors = findViewById(R.id.tv_visitors);
         incrementBtn = findViewById(R.id.increment_btn);
@@ -79,9 +88,31 @@ public class EntranceVerificationActivity extends AppCompatActivity {
         logout = findViewById(R.id.logout);
     }
 
+    private void isCardExpiredOrInvalid() {
+        if (Constants.IS_CARD_EXPIRED) {
+            invalidLayout.setVisibility(View.VISIBLE);
+            validLayout.setVisibility(View.GONE);
+            invalidLayout.setBackgroundResource(R.drawable.expired_card);
+            invalidDetails.setVisibility(View.VISIBLE);
+
+            validityInfo.setText(R.string.expired_card);
+            validityDetails.setText(R.string.expired_card_details);
+
+        } else if (Constants.IS_CARD_INVALID) {
+            invalidLayout.setVisibility(View.VISIBLE);
+            validLayout.setVisibility(View.GONE);
+            invalidLayout.setBackgroundResource(R.drawable.invalid_card);
+
+            validityInfo.setText(R.string.invalid_card);
+            validityDetails.setText(R.string.invalid_card_details);
+        } else {
+            validLayout.setVisibility(View.VISIBLE);
+            invalidLayout.setVisibility(View.GONE);
+        }
+    }
+
     private void setCardDesign(String cardName) {
         switch (cardName) {
-
             case "diamond":
                 cardView.setBackgroundTintList(getResources().getColorStateList(R.color.dark_gray));
                 break;

@@ -3,6 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     package="np.com.bottle.podapp">
 
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.NFC" />
@@ -25,15 +26,23 @@
         android:supportsRtl="true"
         android:theme="@style/BaseTheme"
         tools:replace="android:allowBackup">
-        <activity android:name=".activity.AlarmActivity">
-           <!-- <intent-filter>
+        <activity android:name=".activity.TestingActivity">
+            <!--<intent-filter>
                 <action android:name="android.intent.action.MAIN" />
+
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>-->
         </activity>
-        
-        <receiver android:name=".util.AlarmReceiver"/>
-        
+        <activity android:name=".activity.AlarmActivity">
+            <!--<intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>-->
+        </activity>
+
+        <receiver android:name=".util.AlarmReceiver" />
+
         <activity android:name=".activity.EntranceVerificationActivity" />
         <activity android:name=".activity.SettingsActivity" />
 
@@ -43,26 +52,28 @@
         <service
             android:name=".services.DeviceHealthService"
             android:exported="false" />
-        
+
         <uses-library
             android:name="org.apache.http.legacy"
             android:required="false" />
 
         <activity android:name=".activity.AdDisplayActivity">
-            <intent-filter>
+            <!--<intent-filter>
                 <action android:name="android.nfc.action.NDEF_DISCOVERED" />
                 <action android:name="android.nfc.action.TAG_DISCOVERED" />
                 <action android:name="android.nfc.action.TECH_DISCOVERED" />
 
                 <category android:name="android.intent.category.DEFAULT" />
-            </intent-filter>
+            </intent-filter>-->
         </activity>
         <activity android:name=".activity.ProvisioningActivity" />
         <activity android:name=".activity.SplashScreenActivity">
+
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+
         </activity>
         <activity android:name=".activity.MainActivity" />
     </application>

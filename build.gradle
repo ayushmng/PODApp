@@ -10,6 +10,7 @@ buildscript {
             url "http://dl.bintray.com/fatihsokmen/github-public-apache2"
         }
         maven { url 'https://jitpack.io' }
+        maven { url 'http://audiobox.keytwo.net' }
     }
     dependencies {
         classpath 'com.google.gms:google-services:4.3.3'

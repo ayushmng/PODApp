@@ -1,15 +1,22 @@
 package np.com.bottle.podapp.services;
 
+import android.annotation.SuppressLint;
 import android.app.ActivityManager;
 import android.app.IntentService;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.TrafficStats;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
+import android.os.BatteryManager;
+import android.os.StrictMode;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -17,6 +24,11 @@ import androidx.annotation.Nullable;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import com.profesorfalken.jsensors.JSensors;
+import com.profesorfalken.jsensors.model.components.Components;
+import com.profesorfalken.jsensors.model.components.Cpu;
+import com.profesorfalken.jsensors.model.sensors.Fan;
+import com.profesorfalken.jsensors.model.sensors.Temperature;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -24,10 +36,13 @@ import java.io.FileFilter;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.RandomAccessFile;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.regex.Pattern;
@@ -42,7 +57,7 @@ import okhttp3.ResponseBody;
 import retrofit2.Call;
 import retrofit2.Callback;
 
-public class DeviceHealthService extends IntentService {
+public class DeviceHealthService extends IntentService implements SensorEventListener {
 
     private long mStartRX;
     private long mStartTX;
@@ -51,6 +66,7 @@ public class DeviceHealthService extends IntentService {
     private AppPreferences appPref;
     private DatabaseHelper helper;
     private static int sLastCpuCoreCount = -1;
+    private float batteryTemp;
     private String deviceId, payloadType, fleetId, freeRam, cpuUsage, cpuTemperature, rssi, uplink, downlink, log, status;
     ArrayList<DeviceHealth> deviceHealthList = new ArrayList<DeviceHealth>();
 
@@ -76,7 +92,37 @@ public class DeviceHealthService extends IntentService {
         payloadType = Constants.PAYLOAD_TYPE_HEALTH;
         fleetId = appPref.getString(AppPreferences.FLEET_ID);
 
+        Intent intent = new Intent();
+        batteryTemp = ((float) (intent.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 0)) / 10);
+
         getDeviceHealthStatus();
+
+        //Obtaining CPU Temperature, Codes from the library:
+        Map<String, String> overriddenConfig = new HashMap<String, String>();
+        overriddenConfig.put("debugMode", "true");
+
+      /*  Components components = JSensors.get.config(overriddenConfig).components();
+        List<Cpu> cpus = components.cpus;
+        if (cpus != null) {
+            for (final Cpu cpu : cpus) {
+                System.out.println("Found CPU component: " + cpu.name);
+                if (cpu.sensors != null) {
+                    System.out.println("Sensors: ");
+
+                    //Print temperatures
+                    List<Temperature> temps = cpu.sensors.temperatures;
+                    for (final Temperature temp : temps) {
+                        System.out.println(temp.name + ": " + temp.value + " C");
+                    }
+
+                    //Print fan speed
+                    List<Fan> fans = cpu.sensors.fans;
+                    for (final Fan fan : fans) {
+                        System.out.println(fan.name + ": " + fan.value + " RPM");
+                    }
+                }
+            }
+        }*/
 
         //TODO: Check if both returns same value or not...i.e. the commented section provides temp. in Celcius
         cpuTemperature = String.valueOf(cpuTemperature()); //Float.toString(Helper.getCurrentCPUTemperatureInCelcius())
@@ -153,6 +199,14 @@ public class DeviceHealthService extends IntentService {
             e.printStackTrace();
         }
 
+        myCPUTempReader();
+
+        /*float cpu_temp = getCurrentCPUTemperature();
+        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.M) {
+            cpu_temp = cpu_temp / 1000;
+            Log.i(TAG, "Cpu Temp: " + cpu_temp + "C");
+        }*/
+
         mStartRX = TrafficStats.getTotalRxBytes();
         mStartTX = TrafficStats.getTotalTxBytes();
 
@@ -219,17 +273,154 @@ public class DeviceHealthService extends IntentService {
             BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
 
             String line = reader.readLine();
+
             if (line != null) {
                 float temp = Float.parseFloat(line);
                 return temp / 1000.0f;
             } else {
                 return 51.0f;
             }
-        } catch (Exception e) {
+        } catch (
+                Exception e) {
             e.printStackTrace();
             return 0.0f;
         }
+
     }
+
+    private float getCurrentCPUTemperature() {
+        String file = readFile("/sys/devices/virtual/thermal/thermal_zone0/temp", '\n');
+
+        if (file != null) {
+            return Long.parseLong(file);
+        } else {
+            return Long.parseLong(batteryTemp + " " + (char) 0x00B0 + "C");
+        }
+    }
+
+    private byte[] mBuffer = new byte[4096];
+
+    @SuppressLint("NewApi")
+    private String readFile(String file, char endChar) {
+        // Permit disk reads here, as /proc/meminfo isn't really "on
+        // disk" and should be fast.  TODO: make BlockGuard ignore
+        // /proc/ and /sys/ files perhaps?
+        StrictMode.ThreadPolicy savedPolicy = StrictMode.allowThreadDiskReads();
+        FileInputStream is = null;
+        try {
+            is = new FileInputStream(file);
+            int len = is.read(mBuffer);
+            is.close();
+
+            if (len > 0) {
+                int i;
+                for (i = 0; i < len; i++) {
+                    if (mBuffer[i] == endChar) {
+                        break;
+                    }
+                }
+                return new String(mBuffer, 0, i);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            if (is != null) {
+                try {
+                    is.close();
+                } catch (java.io.IOException e) {
+                    e.printStackTrace();
+                }
+            }
+            StrictMode.setThreadPolicy(savedPolicy);
+        }
+        return null;
+    }
+
+    private void myCPUTempReader() {
+
+        ArrayList<String> temp_dir_list = new ArrayList<>();
+        temp_dir_list.add("/sys/devices/system/cpu/cpu0/cpufreq/cpu_temp");
+        temp_dir_list.add("/sys/devices/system/cpu/cpu0/cpufreq/FakeShmoo_cpu_temp");
+        temp_dir_list.add("/sys/class/thermal/thermal_zone1/temp");
+        temp_dir_list.add("/sys/class/i2c-adapter/i2c-4/4-004c/temperature");
+        temp_dir_list.add("/sys/devices/platform/tegra-i2c.3/i2c-4/4-004c/temperature");
+        temp_dir_list.add("/sys/devices/platform/omap/omap_temp_sensor.0/temperature");
+        temp_dir_list.add("/sys/devices/platform/tegra_tmon/temp1_input");
+        temp_dir_list.add("/sys/kernel/debug/tegra_thermal/temp_tj");
+        temp_dir_list.add("/sys/devices/platform/s5p-tmu/temperature");
+        temp_dir_list.add("/sys/class/thermal/thermal_zone0/temp");
+        temp_dir_list.add("/sys/devices/virtual/thermal/thermal_zone0/temp");
+        temp_dir_list.add("/sys/class/hwmon/hwmon0/device/temp1_input");
+        temp_dir_list.add("/sys/devices/virtual/thermal/thermal_zone1/temp");
+        temp_dir_list.add("/sys/devices/platform/s5p-tmu/curr_temp");
+
+        File cputempfile = null;
+
+        for (String dir : temp_dir_list) {
+            cputempfile = new File(dir);
+
+            if (cputempfile.exists()) {
+                String[] array = new String[temp_dir_list.size()]; // Converting Array of String to String Array
+                for (int j = 0; j < temp_dir_list.size(); j++) {
+                    array[j] = temp_dir_list.get(j);
+                    Log.i(TAG, "Cpu Temp: " + ReadCPU0(array));
+                }
+            } else {
+                Log.i(TAG, "Cpu Temp: " + "Sorry doesn't exist");
+            }
+        }
+
+        /*String[] cputemp = {"/system/bin/cat", "sys/class/thermal/thermal_zone0/temp"};
+        File cputempfile = new File("sys/class/thermal/thermal_zone0/temp");
+        if (cputempfile.exists()) {
+            ReadCPU0(cputemp);
+            Log.i(TAG, "Cpu Temp: " + ReadCPU0(cputemp));
+        } else {
+            Log.i(TAG, "Cpu Temp: " + "Sorry doesn't exist");
+        }*/
+
+        SensorManager mSensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
+        assert mSensorManager != null;
+        mSensorManager.registerListener(temperatureSensor, mSensorManager.getDefaultSensor(Sensor.TYPE_TEMPERATURE), SensorManager.SENSOR_DELAY_NORMAL);
+
+    }
+
+    private String ReadCPU0(String[] input) {
+        ProcessBuilder pB;
+        String result = "";
+
+        try {
+            //String[] args = {"/system/bin/cat", "/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq"};
+            pB = new ProcessBuilder(input);
+            pB.redirectErrorStream(false);
+            Process process = pB.start();
+            InputStream in = process.getInputStream();
+            byte[] re = new byte[1024];
+            while (in.read(re) != -1) //default -1
+            {
+                //System.out.println(new String(re));
+                result = new String(re);
+            }
+            in.close();
+        } catch (IOException ex) {
+            ex.printStackTrace();
+        }
+        return result;
+    }
+
+    private SensorEventListener temperatureSensor = new SensorEventListener() {
+        @Override
+        public void onSensorChanged(SensorEvent event) {
+            System.out.println("on sensor changed called");
+            float temp = event.values[0];
+            System.out.println("Temperature sensor: " + temp);
+        }
+
+        @Override
+        public void onAccuracyChanged(Sensor sensor, int accuracy) {
+
+        }
+    };
 
     private void wifiSpeed() {
         if (mStartRX != TrafficStats.UNSUPPORTED || mStartTX != TrafficStats.UNSUPPORTED) {
@@ -410,5 +601,16 @@ public class DeviceHealthService extends IntentService {
             else return true;
         } else
             return false;
+    }
+
+    @Override
+    public void onSensorChanged(SensorEvent sensorEvent) {
+        float ambient_temperature = sensorEvent.values[0];
+        Log.i(TAG, "Ambient Temperature:\n " + (ambient_temperature) + "C");
+    }
+
+    @Override
+    public void onAccuracyChanged(Sensor sensor, int i) {
+
     }
 }

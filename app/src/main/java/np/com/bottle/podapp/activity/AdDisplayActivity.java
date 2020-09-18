@@ -110,9 +110,8 @@ public class AdDisplayActivity extends AppCompatActivity implements MediaContent
 
     private ViewPager mPager;
     private static int currentPage;
-//    private static int currentPage = 0;
+    //    private static int currentPage = 0;
     private static int NUM_PAGES = 0;
-    private ArrayList<Uri> ImagesArray = new ArrayList<>();
     private List<Media> mediaList;
 
     private List<String> timeSlotList;
@@ -150,6 +149,7 @@ public class AdDisplayActivity extends AppCompatActivity implements MediaContent
         timeSlotList = new ArrayList<>();
 
         mPager = findViewById(R.id.vpAdContent);
+
         //Disables scrolling behaviour
         /*mPager.setOnTouchListener(new View.OnTouchListener() {
             @Override
@@ -293,7 +293,7 @@ public class AdDisplayActivity extends AppCompatActivity implements MediaContent
         super.onResume();
         libInstance.startForeGroundDispatch();
         registerReceiver(receiver, new IntentFilter(ContentDownloadIntentService.NOTIFICATION));
-//        mediaLoop(Constants.MEDIALOOPSTATUS.START);
+        mediaLoop(Constants.MEDIALOOPSTATUS.START);
     }
 
     @Override
@@ -313,7 +313,6 @@ public class AdDisplayActivity extends AppCompatActivity implements MediaContent
         mediaLoop(Constants.MEDIALOOPSTATUS.STOP);
         videoPause();
         Log.i(TAG, "Activity Destroyed");
-//        mediaContentAdapter = new MediaContentAdapter(this, AdDisplayActivity.this, ImagesArray, mediaList, true, true);
     }
 
     // region NFC Initialization
@@ -363,6 +362,10 @@ public class AdDisplayActivity extends AppCompatActivity implements MediaContent
                         libInstance.getCustomModules()
                 ));
                 break;
+
+            //TODO: Check invalid condition here:
+            default:
+                Constants.IS_CARD_INVALID = true;
         }
     }
 
@@ -392,7 +395,6 @@ public class AdDisplayActivity extends AppCompatActivity implements MediaContent
 
             byte[] fileData4 = desFireEV1.readData(NfcFileType.CARD_TYPE_FILE_ID, 0, 0);
             Log.d(TAG, "App Data 4: " + Helper.convertHexToString(fileData4));
-
 
             // Creating Payload for mqtt publish
             JSONObject paymentPayload = new JSONObject();
@@ -470,9 +472,7 @@ public class AdDisplayActivity extends AppCompatActivity implements MediaContent
         Log.d(TAG, "----- content data: " + contentPref.getString(ContentPreferences.CONTENT_DATA));
         Log.d(TAG, "----- content count: " + mediaList.size());
 
-        ImagesArray.add(Uri.parse(getFilesDir().getAbsolutePath() + "/content/ncellimage.jpg"));
-
-        mediaContentAdapter = new MediaContentAdapter(this, AdDisplayActivity.this, ImagesArray, mediaList);
+        mediaContentAdapter = new MediaContentAdapter(this, AdDisplayActivity.this, mediaList);
         mPager.setAdapter(mediaContentAdapter);
         NUM_PAGES = mediaList.size();
 
@@ -622,6 +622,39 @@ public class AdDisplayActivity extends AppCompatActivity implements MediaContent
                             }
                             mPager.setCurrentItem(currentPage, true);
                             Log.d(TAG, "currentPage: --- " + currentPage);
+
+                            mPager.addOnPageChangeListener(new ViewPager.OnPageChangeListener() {
+                                @Override
+                                public void onPageScrolled(int position, float positionOffset, int positionOffsetPixels) {
+                                    Log.i("ScrollState", "OnScrolled");
+                                    Log.i("ScrollState", mediaList.get(position).MediaType);
+                                }
+
+                                @Override
+                                public void onPageSelected(int position) {
+                                    Log.i("ScrollState", "OnPageSelected");
+                                }
+
+                                @Override
+                                public void onPageScrollStateChanged(int state) {
+                                    // Allows video player to play at its specific position
+                                    state = mPager.getCurrentItem();
+                                    if (mediaList.get(state).MediaType.equals(Media.MEDIA_TYPE_VIDEO)) {
+                                        View view = mPager.findViewWithTag(state);
+                                        PlayerView playerView = view.findViewById(R.id.pvVideo);
+                                        Player player = playerView.getPlayer();
+                                        if (player != null) {
+                                            playerView.setPlayer(player);
+                                            player.setPlayWhenReady(true);
+                                            Log.i("ScrollState", "Player ready");
+                                        } else {
+                                            Log.i("ScrollState", "Player not ready");
+                                        }
+                                    }
+
+                                    Log.i("ScrollState", "OnAutoScrolled");
+                                }
+                            });
                         }
                     };
 
@@ -650,124 +683,8 @@ public class AdDisplayActivity extends AppCompatActivity implements MediaContent
             default:
                 break;
         }
-    }
-
-   /* private void mediaLoop(Constants.MEDIALOOPSTATUS medialoopstatus) {
-        switch (medialoopstatus) {
-            case START:
-                if (NUM_PAGES > 0) {
-                    mediaChangeTimer = new Timer();
-
-                    final Handler handler = new Handler(Looper.getMainLooper());
-                    final Runnable Update = new Runnable() {
-                        public void run() {
-
-                            Log.i(TAG, "Media: TotalPage: " + NUM_PAGES);
-
-                            if (currentPage >= NUM_PAGES - 1) {
-                                currentPage = 0;
-                            } else if (currentPage == 0) {
-                                Log.d(TAG, "currentPage: First Page");
-                            } else {
-                                currentPage++;
-                                Log.d(TAG, "Media: page added: " + currentPage);
-                            }
-
-                            mPager.setCurrentItem(currentPage, true);
-                            Log.d(TAG, "Media: changed Page: --- " + currentPage);
-                        }
-                    };
-
-                    mediaChangeTimer.schedule(new TimerTask() {
-                        @Override
-                        public void run() {
-                            tempCount++;
-//                            tempCount = 0; // temp
-
-                            if (tempCount >= (INTERVAL2 / 1000) && tempCount <= ((INTERVAL2 / 1000) + 10)) {
-                                runOnUiThread(() -> {
-                                    lotteLayout.setVisibility(View.VISIBLE);
-                                    mPager.setVisibility(View.GONE);
-                                    if (mediaList.get(mPager.getCurrentItem()).MediaType.equals(Media.MEDIA_TYPE_VIDEO)) {
-                                        videoPause();
-                                    }
-                                });
-                                if (tempCount >= ((INTERVAL2 / 1000) + 10)) {
-                                    tempCount = 0;
-                                }
-                            } else {
-                                count++;
-                                Log.d(TAG, "Media: count: " + count);
-
-                                runOnUiThread(() -> {
-                                    lotteLayout.setVisibility(View.GONE);
-                                    mPager.setVisibility(View.VISIBLE);
-                                });
-                                if (count >= mediaList.get(mPager.getCurrentItem()).Interval) {
-                                    Log.d(TAG, "Media: current page: " + mPager.getCurrentItem());
-                                    Log.d(TAG, "Media: current interval: " + mediaList.get(mPager.getCurrentItem()).Interval);
-
-                                    handler.post(Update);
-                                    count = 0;
-                                }
-                            }
-                        }
-                    }, 1000, 1000);
-                }
-                break;
-            case STOP:
-                mediaChangeTimer.cancel();
-                break;
-
-            default:
-                break;
-        }
-    }*/
-
-    /*@Override
-    public void onVideoEnds(boolean atVideoState, boolean isVideoEnd) {
-        isVideoPlaying = atVideoState;
-
-        // Helps to detect whether is page is auto scrolled or scrolled by an user
-       *//* mPager.addOnPageChangeListener(new ViewPager.OnPageChangeListener() {
-            @Override
-            public void onPageScrolled(int position, float positionOffset, int positionOffsetPixels) {
-                Log.i("ScrollState", "OnScrolled - " + atVideoState);
-            }
-
-            @Override
-            public void onPageSelected(int position) {
-
-            }
-
-            @Override
-            public void onPageScrollStateChanged(int state) {
-                Log.i("ScrollState", "OnAutoScrolled - " + atVideoState);
-            }
-        });*//*
-
-//        Disabling autoScroll when Video plays
-        *//*if (atVideoState) {
-            Log.i("Show Video State", "atVideoPlayer : " + isEnd);
-            mPager.setCurrentItem(currentPage, false);
-            lotteLayout.setVisibility(View.GONE);
-        } else {
-            Log.i("Show Video State", "atImageView : " + isEnd);
-            mPager.setCurrentItem(currentPage, true);
-            mPager.setCurrentItem(currentPage, false);
-        } *//*
-
-        *//*if (isVideoEnd) {
-//            mediaLoop(Constants.MEDIALOOPSTATUS.START);
-            mPager.setCurrentItem(currentPage, true);
-        }*//*
 
     }
-
-    @Override
-    public void onCurrentPagePos(int pos) {
-        currentPage = pos;
-    }*/
 
     class DownloadThread extends Thread {
         String strPayload;

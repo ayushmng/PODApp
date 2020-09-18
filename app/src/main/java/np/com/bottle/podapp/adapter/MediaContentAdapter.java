@@ -12,9 +12,7 @@ import android.widget.ImageView;
 import androidx.annotation.NonNull;
 import androidx.viewpager.widget.PagerAdapter;
 
-import com.google.android.exoplayer2.ExoPlaybackException;
 import com.google.android.exoplayer2.ExoPlayerFactory;
-import com.google.android.exoplayer2.Player;
 import com.google.android.exoplayer2.SimpleExoPlayer;
 import com.google.android.exoplayer2.source.MediaSource;
 import com.google.android.exoplayer2.source.ProgressiveMediaSource;
@@ -22,7 +20,8 @@ import com.google.android.exoplayer2.ui.PlayerView;
 import com.google.android.exoplayer2.upstream.DataSource;
 import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory;
 
-import java.util.ArrayList;
+import org.jetbrains.annotations.NotNull;
+
 import java.util.List;
 
 import np.com.bottle.podapp.R;
@@ -32,25 +31,16 @@ public class MediaContentAdapter extends PagerAdapter {
 
     private static String TAG = MediaContentAdapter.class.getSimpleName();
 
-    private OnVideoEndListener listener;
     private SimpleExoPlayer player;
     private PlayerView playerView;
-    private ArrayList<Uri> IMAGES;
     private LayoutInflater inflater;
     private Context context;
     private List<Media> mediaList;
 
-    public MediaContentAdapter(Context context, OnVideoEndListener onVideoEndListener, ArrayList<Uri> IMAGES, List<Media> mediaList) {
+    public MediaContentAdapter(Context context, List<Media> mediaList) {
         this.context = context;
-        this.IMAGES = IMAGES;
-//        this.listener = onVideoEndListener;
         inflater = LayoutInflater.from(context);
         this.mediaList = mediaList;
-    }
-
-    public interface OnVideoEndListener {
-//        void onVideoEnds(boolean atVideoPlayerState, boolean isVideoEnd);
-//        void onCurrentPagePos(int pos);
     }
 
     @Override
@@ -69,7 +59,6 @@ public class MediaContentAdapter extends PagerAdapter {
 
         View mediaLayout = inflater.inflate(R.layout.media_content_layout, view, false);
 
-//        listener.onCurrentPagePos(position);
         Log.i(TAG, "currentPageFromAdapter: " + position);
 
         assert mediaLayout != null;
@@ -85,18 +74,14 @@ public class MediaContentAdapter extends PagerAdapter {
 //            imageView.setImageURI(IMAGES.get(position));
             imageView.setImageURI(mediaList.get(position).MediaUri);
             imageView.setVisibility(View.VISIBLE);
-
             playerView.setVisibility(View.GONE);
-//            listener.onVideoEnds(false, false);
-//            player.prepare(mediaSource);
 
         } else {
 
             player.prepare(mediaSource);
-            player.setPlayWhenReady(true);
             playerView.setPlayer(player);
             playerView.setVisibility(View.VISIBLE);
-//            listener.onVideoEnds(true, false);
+//            player.setPlayWhenReady(true);
 
             /*player.addListener(new Player.EventListener() {
                 @Override
@@ -122,29 +107,24 @@ public class MediaContentAdapter extends PagerAdapter {
             });*/
         }
 
-//        SimpleExoPlayer player = ExoPlayerFactory.newSimpleInstance(context);
-//        MediaSource mediaSource = buildMediaSource(mediaList.get(1).MediaUri);
-//
-//        Log.d(TAG, "media uri: " + mediaList.get(1).MediaUri);
-//
-//        player.prepare(mediaSource);
-//        player.setPlayWhenReady(true);
-//        playerView.setVisibility(View.VISIBLE);
-//
-//        playerView.setPlayer(player);
         mediaLayout.setTag(position);
         view.addView(mediaLayout, 0);
         return mediaLayout;
     }
 
     @Override
-    public void restoreState(Parcelable state, ClassLoader loader) {}
+    public void restoreState(Parcelable state, ClassLoader loader) {
+    }
 
     @Override
-    public Parcelable saveState() { return null; }
+    public Parcelable saveState() {
+        return null;
+    }
 
     @Override
-    public int getItemPosition(Object object) { return 0; }
+    public int getItemPosition(@NotNull Object object) {
+        return 0;
+    }
 
     @Override
     public void destroyItem(ViewGroup container, int position, @NonNull Object object) {
@@ -154,10 +134,6 @@ public class MediaContentAdapter extends PagerAdapter {
     private MediaSource buildMediaSource(Uri uri) {
         DataSource.Factory dataSourceFactory = new DefaultDataSourceFactory(context, "exoplayer-codelab");
         return new ProgressiveMediaSource.Factory(dataSourceFactory).createMediaSource(uri);
-    }
-
-    private void setPlayWhenReady(boolean playWhenReady) {
-        player.setPlayWhenReady(playWhenReady);
     }
 
 }
