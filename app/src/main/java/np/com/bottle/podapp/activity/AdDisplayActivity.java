@@ -15,7 +15,6 @@ import android.os.Bundle;
 import android.os.CountDownTimer;
 import android.os.Handler;
 import android.os.Looper;
-import android.os.Message;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
@@ -479,9 +478,9 @@ public class AdDisplayActivity extends AppCompatActivity {
 
         //------------------------------------------------------------//
 
-        timeSlotList.add("17:36 - 15:53");
-        timeSlotList.add("17:38 - 15:47");
-        timeSlotList.add("17:40 - 15:50");
+        timeSlotList.add("18:14 - 15:53");
+        timeSlotList.add("18:16 - 15:47");
+        timeSlotList.add("18:17 - 15:50");
 
         /*timerCount++;
         if (timerCount < timeSlotList.size()) {
@@ -723,13 +722,6 @@ public class AdDisplayActivity extends AppCompatActivity {
 
     public void getDeviceTime() {
 
-        Handler mHandler = new Handler(Looper.getMainLooper()) {
-            @Override
-            public void handleMessage(Message message) {
-
-            }
-        };
-
         mediaChangeTimer.schedule(new TimerTask() {
             @Override
             public void run() {
@@ -754,7 +746,19 @@ public class AdDisplayActivity extends AppCompatActivity {
 
                     if (deviceTime.equals(time)) {
 
-                        startCountDownTimer();
+                        runOnUiThread(new Runnable() {
+                            public void run() {
+
+                                timerCount++;
+                                if (timerCount < timeSlotList.size()) {
+                                    String startingTime = timeSlotList.get(timerCount);
+                                    String time = startingTime.substring(0, 5);
+                                    Log.i(TAG, "Timer duration: " + time);
+
+                                    getDeviceTime();
+                                }
+                            }
+                        });
 
                     }
                 }
@@ -762,26 +766,6 @@ public class AdDisplayActivity extends AppCompatActivity {
             }
         }, 1000, 1000);
 
-    }
-
-    private void startCountDownTimer() {
-        new CountDownTimer((1000 * 60), (1000 * 60) / 2) {
-            public void onTick(long millisUntilFinished) {
-                Log.i(TAG, "Timer Starts : " + millisUntilFinished);
-            }
-
-            public void onFinish() {
-                Log.i(TAG, "Timer Completed");
-                timerCount++;
-                if (timerCount < timeSlotList.size()) {
-                    String startingTime = timeSlotList.get(timerCount);
-                    String time = startingTime.substring(0, 5);
-                    Log.i(TAG, "Timer duration: " + time);
-
-                    getDeviceTime();
-                }
-            }
-        }.start();
     }
 
     class DownloadThread extends Thread {
