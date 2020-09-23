@@ -24,11 +24,6 @@ import androidx.annotation.Nullable;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
-import com.profesorfalken.jsensors.JSensors;
-import com.profesorfalken.jsensors.model.components.Components;
-import com.profesorfalken.jsensors.model.components.Cpu;
-import com.profesorfalken.jsensors.model.sensors.Fan;
-import com.profesorfalken.jsensors.model.sensors.Temperature;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -40,8 +35,10 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.RandomAccessFile;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -210,7 +207,7 @@ public class DeviceHealthService extends IntentService implements SensorEventLis
         mStartRX = TrafficStats.getTotalRxBytes();
         mStartTX = TrafficStats.getTotalTxBytes();
 
-        //TODO: call wifiSpeed method in the same timertask used while sending value to API and storing to db, try calling methods on same timertask
+        //TODO: call wifiSpeed method in the same timer-task used while sending value to API and storing to db, try calling methods on same timertask
         Timer timer = new Timer();
         TimerTask timerTask = new TimerTask() {
             @Override

@@ -113,18 +113,13 @@ public class MediaContentAdapter extends PagerAdapter {
     }
 
     @Override
-    public void restoreState(Parcelable state, ClassLoader loader) {
-    }
+    public void restoreState(Parcelable state, ClassLoader loader) { }
 
     @Override
-    public Parcelable saveState() {
-        return null;
-    }
+    public Parcelable saveState() { return null; }
 
     @Override
-    public int getItemPosition(@NotNull Object object) {
-        return 0;
-    }
+    public int getItemPosition(@NotNull Object object) { return 0; }
 
     @Override
     public void destroyItem(ViewGroup container, int position, @NonNull Object object) {

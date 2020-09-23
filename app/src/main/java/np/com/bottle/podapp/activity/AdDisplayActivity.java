@@ -15,6 +15,7 @@ import android.os.Bundle;
 import android.os.CountDownTimer;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.Message;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
@@ -53,6 +54,7 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.Random;
 import java.util.Timer;
@@ -74,7 +76,7 @@ import np.com.bottle.podapp.services.DeviceHealthService;
 import np.com.bottle.podapp.util.Constants;
 import np.com.bottle.podapp.util.Helper;
 
-public class AdDisplayActivity extends AppCompatActivity implements MediaContentAdapter.OnVideoEndListener {
+public class AdDisplayActivity extends AppCompatActivity {
 
     private static String TAG = AdDisplayActivity.class.getSimpleName();
     private ConstraintLayout lotteLayout;
@@ -110,19 +112,18 @@ public class AdDisplayActivity extends AppCompatActivity implements MediaContent
 
     private ViewPager mPager;
     private static int currentPage;
-    //    private static int currentPage = 0;
     private static int NUM_PAGES = 0;
     private List<Media> mediaList;
 
     private List<String> timeSlotList;
-    int timerCount = -1;
+    int timerCount = 0;
 
     private MediaContentAdapter mediaContentAdapter;
     private Timer mediaChangeTimer = new Timer();
     private int count = 0;
     private int tempCount = 0;
 
-    /*
+    /**
      * Initialize content date so as to not make it null.
      * Initial value of contentDate is random date. It has no use.
      */
@@ -472,23 +473,23 @@ public class AdDisplayActivity extends AppCompatActivity implements MediaContent
         Log.d(TAG, "----- content data: " + contentPref.getString(ContentPreferences.CONTENT_DATA));
         Log.d(TAG, "----- content count: " + mediaList.size());
 
-        mediaContentAdapter = new MediaContentAdapter(this, AdDisplayActivity.this, mediaList);
+        mediaContentAdapter = new MediaContentAdapter(this, mediaList);
         mPager.setAdapter(mediaContentAdapter);
         NUM_PAGES = mediaList.size();
 
         //------------------------------------------------------------//
 
-        timeSlotList.add("16:47 - 15:53");
-        timeSlotList.add("16:49 - 15:47");
-        timeSlotList.add("16:51 - 15:50");
+        timeSlotList.add("17:36 - 15:53");
+        timeSlotList.add("17:38 - 15:47");
+        timeSlotList.add("17:40 - 15:50");
 
-        timerCount++;
+        /*timerCount++;
         if (timerCount < timeSlotList.size()) {
             String startingTime = timeSlotList.get(timerCount);
             String time = startingTime.substring(0, 5);
             Log.i(TAG, "Timer duration: " + time);
             setTimeSlot(time, 1);
-        }
+        }*/
 
     }
 
@@ -627,7 +628,36 @@ public class AdDisplayActivity extends AppCompatActivity implements MediaContent
                                 @Override
                                 public void onPageScrolled(int position, float positionOffset, int positionOffsetPixels) {
                                     Log.i("ScrollState", "OnScrolled");
-                                    Log.i("ScrollState", mediaList.get(position).MediaType);
+
+                                    position = mPager.getCurrentItem();
+
+                                    if (mediaList.get(position).MediaType.equals(Media.MEDIA_TYPE_VIDEO)) {
+                                        View view = mPager.findViewWithTag(position);
+                                        PlayerView playerView = view.findViewById(R.id.pvVideo);
+                                        Player player = playerView.getPlayer();
+
+                                        if (player != null) {
+                                            player.addListener(new Player.DefaultEventListener() {
+                                                @Override
+                                                public void onPlayerStateChanged(boolean playWhenReady, int playbackState) {
+                                                    if (playWhenReady && playbackState == Player.STATE_READY) {
+                                                        // media actually playing
+                                                        Log.i(TAG, "Video is playing");
+                                                    } else if (playWhenReady) {
+//                                                        videoPause();
+                                                        Log.i(TAG, "Video is buffering");
+                                                        // might be idle (plays after prepare()),
+                                                        // buffering (plays when data available)
+                                                        // or ended (plays when seek away from end)
+                                                    } else {
+                                                        Log.i(TAG, "Video is paused");
+                                                        // player paused in any state
+                                                    }
+                                                }
+                                            });
+                                        }
+
+                                    }
                                 }
 
                                 @Override
@@ -639,19 +669,18 @@ public class AdDisplayActivity extends AppCompatActivity implements MediaContent
                                 public void onPageScrollStateChanged(int state) {
                                     // Allows video player to play at its specific position
                                     state = mPager.getCurrentItem();
+
                                     if (mediaList.get(state).MediaType.equals(Media.MEDIA_TYPE_VIDEO)) {
                                         View view = mPager.findViewWithTag(state);
                                         PlayerView playerView = view.findViewById(R.id.pvVideo);
                                         Player player = playerView.getPlayer();
+
                                         if (player != null) {
                                             playerView.setPlayer(player);
                                             player.setPlayWhenReady(true);
-                                            Log.i("ScrollState", "Player ready");
-                                        } else {
-                                            Log.i("ScrollState", "Player not ready");
                                         }
-                                    }
 
+                                    }
                                     Log.i("ScrollState", "OnAutoScrolled");
                                 }
                             });
@@ -672,8 +701,14 @@ public class AdDisplayActivity extends AppCompatActivity implements MediaContent
                                     count = 0;
                                 }
                             }
+
+//                            getDeviceTime();
+
                         }
                     }, 1000, 1000);
+
+                    getDeviceTime();
+
                 }
                 break;
             case STOP:
@@ -684,6 +719,69 @@ public class AdDisplayActivity extends AppCompatActivity implements MediaContent
                 break;
         }
 
+    }
+
+    public void getDeviceTime() {
+
+        Handler mHandler = new Handler(Looper.getMainLooper()) {
+            @Override
+            public void handleMessage(Message message) {
+
+            }
+        };
+
+        mediaChangeTimer.schedule(new TimerTask() {
+            @Override
+            public void run() {
+
+                Calendar calendar = Calendar.getInstance(Locale.getDefault());
+                String hour = String.valueOf(calendar.get(Calendar.HOUR_OF_DAY));
+                String minute = String.valueOf(calendar.get(Calendar.MINUTE));
+
+                if (hour.length() == 1) {
+                    hour = "0" + hour;
+                } else if (minute.length() == 1) {
+                    minute = "0" + minute;
+                }
+
+                String deviceTime = hour + ":" + minute;
+
+                if (timerCount < timeSlotList.size()) {
+                    String startingTime = timeSlotList.get(timerCount);
+                    String time = startingTime.substring(0, 5);
+
+                    Log.i(TAG, "API time: " + time + " Device Time:" + deviceTime);
+
+                    if (deviceTime.equals(time)) {
+
+                        startCountDownTimer();
+
+                    }
+                }
+
+            }
+        }, 1000, 1000);
+
+    }
+
+    private void startCountDownTimer() {
+        new CountDownTimer((1000 * 60), (1000 * 60) / 2) {
+            public void onTick(long millisUntilFinished) {
+                Log.i(TAG, "Timer Starts : " + millisUntilFinished);
+            }
+
+            public void onFinish() {
+                Log.i(TAG, "Timer Completed");
+                timerCount++;
+                if (timerCount < timeSlotList.size()) {
+                    String startingTime = timeSlotList.get(timerCount);
+                    String time = startingTime.substring(0, 5);
+                    Log.i(TAG, "Timer duration: " + time);
+
+                    getDeviceTime();
+                }
+            }
+        }.start();
     }
 
     class DownloadThread extends Thread {
