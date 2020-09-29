@@ -1,11 +1,10 @@
 package np.com.bottle.podapp.util;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.net.wifi.WifiManager;
 import android.os.StrictMode;
 import android.util.Log;
-
-import com.google.gson.JsonObject;
 
 import org.json.JSONObject;
 
@@ -29,6 +28,7 @@ public class Helper {
 
     /**
      * This method returns current IP address of the device in xxx.xxx.xxx.xxx format.
+     *
      * @param context -> application context
      * @return -> IP in string format
      */
@@ -51,14 +51,39 @@ public class Helper {
         return strIpAddress;
     }
 
+    public static String epochToDate(long time) {
+        @SuppressLint("SimpleDateFormat") SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
+        return format.format(new Date(time));
+    }
+
+    public static int currentDateToEpoch() {
+
+        Date today = Calendar.getInstance().getTime();
+        @SuppressLint("SimpleDateFormat") SimpleDateFormat crunchifyFormat = new SimpleDateFormat("MMM dd yyyy HH:mm:ss.SSS zzz");
+        String currentTime = crunchifyFormat.format(today);
+
+        int output = 0;
+        try {
+            Date date = crunchifyFormat.parse(currentTime);
+            long epochTime = date.getTime() / 1000;
+
+            output = (int) epochTime;
+
+        } catch (ParseException e) {
+            e.printStackTrace();
+        }
+        return output;
+    }
+
     /**
      * Removes garbage characters from the string obtained by from NFC card.
+     *
      * @param data string NFC data
      * @return cleaned string data
      */
     public static String cleanNFCData(String data) {
         if (data != null) {
-            return data.replaceAll("[^a-zA-Z0-9-_ ]","");
+            return data.replaceAll("[^a-zA-Z0-9-_ ]", "");
         } else {
             return "";
         }
@@ -74,11 +99,12 @@ public class Helper {
 
     /**
      * Compares a date value with the current date.
+     *
      * @param strDate value of the date to compare
      * @return true if it is Today's date or false if not.
      */
     public static Boolean compareDate(String strDate) {
-        if(strDate.equals("")) {
+        if (strDate.equals("")) {
             return false;
         }
 

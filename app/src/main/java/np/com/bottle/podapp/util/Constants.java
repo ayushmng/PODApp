@@ -35,9 +35,7 @@ public class Constants {
     public static final int ITEMS_PER_PAGE = 6;
 
     // Identifies Card Recognition for Entrance or Payment
-    public static boolean IS_ENTRANCE_VERIFICATION = false;
-    public static boolean IS_CARD_INVALID = false;
-    public static boolean IS_CARD_EXPIRED = false;
+    public static boolean IS_ENTRANCE_VERIFICATION = true;
 
     public static void constructTopic(String orgId, String deviceId) {
         TOPIC_ACTIVATE_PUB = STAGE + "/data/activation/type/pub/device/" + deviceId;

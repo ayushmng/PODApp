@@ -151,12 +151,12 @@ public class AdDisplayActivity extends AppCompatActivity {
         mPager = findViewById(R.id.vpAdContent);
 
         //Disables scrolling behaviour
-        /*mPager.setOnTouchListener(new View.OnTouchListener() {
+        mPager.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View view, MotionEvent motionEvent) {
                 return true;
             }
-        });*/
+        });
 
         @SuppressLint("SimpleDateFormat") SimpleDateFormat sdf = new SimpleDateFormat("EEEE");
         Date d = new Date();
@@ -352,20 +352,20 @@ public class AdDisplayActivity extends AppCompatActivity {
 
     // region NFC Logic
     private void cardLogic(final Intent intent) {
+
         CardType type = CardType.UnknownCard;
         type = libInstance.getCardType(intent);
         Log.d(TAG, "Type: " + type);
 
-        switch (type) {
-            case DESFireEV1:
-                desireEV1CardLogin(DESFireFactory.getInstance().getDESFire(
-                        libInstance.getCustomModules()
-                ));
-                break;
+        if (type == CardType.DESFireEV1) {
+            desireEV1CardLogin(DESFireFactory.getInstance().getDESFire(
+                    libInstance.getCustomModules()
+            ));
 
-            //TODO: Check invalid condition here:
-            default:
-                Constants.IS_CARD_INVALID = true;
+        } else {
+            Intent intent1 = new Intent(this, EntranceVerificationActivity.class);
+            intent1.putExtra(IsInvalid, true);
+            startActivity(intent1);
         }
     }
 
@@ -377,7 +377,7 @@ public class AdDisplayActivity extends AppCompatActivity {
             Log.d(TAG, "Authentication Start");
             desFireEV1.authenticate(0, IDESFireEV1.AuthType.AES, KeyType.AES128, objKEY_AES128);
 
-            Log.d(TAG, "Authentication Successfull");
+            Log.d(TAG, "Authentication Successful");
 
             byte[] app_Ids = desFireEV1.getFileIDs();
             Log.d(TAG, "App IDs: " + new String(app_Ids, StandardCharsets.UTF_8));
@@ -386,15 +386,31 @@ public class AdDisplayActivity extends AppCompatActivity {
             String strUuid = Helper.convertHexToString(fileData);
             Log.d(TAG, "App Data 1: " + strUuid);
 
-            int strCardNumber = desFireEV1.getValue(NfcFileType.CARD_NUMBER_FILE_ID);
-            Log.d(TAG, "App Data 2: " + strCardNumber);
+            byte[] fileData2 = desFireEV1.readData(NfcFileType.CUSTOMER_NAME_FILE_ID, 0, 0);
+            String userName = Helper.convertHexToString(fileData2);
+            Log.d(TAG, "App Data 2: " + userName);
 
-            byte[] fileData3 = desFireEV1.readData(NfcFileType.CUSTOMER_NAME_FILE_ID, 0, 0);
-            String strName = Helper.convertHexToString(fileData3);
-            Log.d(TAG, "App Data 3: " + strName);
+            int cardType = desFireEV1.getValue(NfcFileType.CARD_TYPE_FILE_ID);
+            Log.d(TAG, "App Data 3: " + cardType);
 
-            byte[] fileData4 = desFireEV1.readData(NfcFileType.CARD_TYPE_FILE_ID, 0, 0);
-            Log.d(TAG, "App Data 4: " + Helper.convertHexToString(fileData4));
+            int cardNumber = desFireEV1.getValue(NfcFileType.CARD_NUMBER_FILE_ID);
+            Log.d(TAG, "App Data 4: " + cardNumber);
+
+            int cardStatus = desFireEV1.getValue(NfcFileType.CARD_STATUS);
+            Log.d(TAG, "App Data 5: " + cardStatus);
+
+            int issuedDate = desFireEV1.getValue(NfcFileType.ISSUED_DATE);
+            Log.d(TAG, "App Data 6: " + issuedDate);
+
+            int expiryDate = desFireEV1.getValue(NfcFileType.EXPIRY_DATE);
+            Log.d(TAG, "App Data 7: " + expiryDate);
+
+            byte[] fileData3 = desFireEV1.readData(NfcFileType.ORGANIZATION_ID, 0, 0);
+            String orgId = Helper.convertHexToString(fileData3);
+            Log.d(TAG, "App Data 8: " + orgId);
+
+            int balance = desFireEV1.getValue(NfcFileType.BALANCE);
+            Log.d(TAG, "App Data 9: " + balance);
 
             // Creating Payload for mqtt publish
             JSONObject paymentPayload = new JSONObject();
@@ -414,13 +430,20 @@ public class AdDisplayActivity extends AppCompatActivity {
 
             if (Constants.IS_ENTRANCE_VERIFICATION) {
                 Intent intent = new Intent(this, EntranceVerificationActivity.class);
-                intent.putExtra(Name, strName);
-                intent.putExtra(CardNumber, strCardNumber);
+                intent.putExtra(Name, userName);
+                intent.putExtra(UserCardNumber, String.valueOf(cardNumber));
+                intent.putExtra(UserCardStatus, cardStatus);
+                intent.putExtra(UserCardType, cardType);
+
+                //Sending true value if card is expired
+                if (Helper.currentDateToEpoch() > expiryDate) {
+                    intent.putExtra(IsExpired, true);
+                }
                 startActivity(intent);
+
             } else {
                 showPinCodeDialog(1);
             }
-
 
         } catch (Exception e) {
             Log.e(TAG, "Auth Fail");
@@ -478,9 +501,9 @@ public class AdDisplayActivity extends AppCompatActivity {
 
         //------------------------------------------------------------//
 
-        timeSlotList.add("18:14 - 15:53");
-        timeSlotList.add("18:16 - 15:47");
-        timeSlotList.add("18:17 - 15:50");
+        timeSlotList.add("12:26 - 15:53");
+        timeSlotList.add("12:27 - 15:47");
+        timeSlotList.add("12:28 - 15:50");
 
         /*timerCount++;
         if (timerCount < timeSlotList.size()) {
@@ -522,24 +545,11 @@ public class AdDisplayActivity extends AppCompatActivity {
                 }
 
                 //Adds timeSlot from JSON data
-                /*for (int k = 0; k < jTimeSlot.length(); k++) {
-                    timeSlotList.add(jTimeSlot.getString(k));
-                }*/
+                for (int k = 0; k < jTimeSlot.length(); k++) {
+//                    timeSlotList.add(jTimeSlot.getString(k));
+                    Log.i(TAG, "Time Slot: " + timeSlotList.get(k));
+                }
             }
-
-            /*String startingTime = timeSlotList.get(0);
-//            int duration = startingTime.charAt(timeSlotList.size() - 1) - startingTime.charAt(0);
-//            Log.i(TAG, "Duration: " + duration);
-//            setTimeSlot(Integer.parseInt(startingTime), duration);
-
-            int time = Integer.parseInt(startingTime.substring(1, 5));
-            Log.i(TAG, "Time duration: " + time);
-            setTimeSlot(time, 1);
-
-            String startingTime = timeSlotList.get(0);
-            String time = startingTime.substring(0, 5);
-            Log.i(TAG, "Time duration: " + time);
-            setTimeSlot(time, 1);*/
 
         } catch (JSONException e) {
             Log.e(TAG, "Error in parsing JSON data.");
@@ -722,6 +732,13 @@ public class AdDisplayActivity extends AppCompatActivity {
 
     public void getDeviceTime() {
 
+        /*String startingTime = timeSlotList.get(0);
+        int duration = startingTime.charAt(timeSlotList.size() - 1) - startingTime.charAt(0);
+        Log.i(TAG, "Duration: " + duration);
+
+        int time = Integer.parseInt(startingTime.substring(1, 5));
+        Log.i(TAG, "Time duration: " + time);*/
+
         mediaChangeTimer.schedule(new TimerTask() {
             @Override
             public void run() {
@@ -740,23 +757,30 @@ public class AdDisplayActivity extends AppCompatActivity {
 
                 if (timerCount < timeSlotList.size()) {
                     String startingTime = timeSlotList.get(timerCount);
-                    String time = startingTime.substring(0, 5);
+                    String time = "";
+                    if (startingTime.length() > 5) {
+                        time = startingTime.substring(0, 5);
+                    } else {
+                        time = startingTime.substring(0, 2);
+                        deviceTime = startingTime.substring(0, 2);
+                    }
 
-                    Log.i(TAG, "API time: " + time + " Device Time:" + deviceTime);
+                    Log.i(TAG, "API time: " + time + " Device Time: " + deviceTime);
 
                     if (deviceTime.equals(time)) {
 
                         runOnUiThread(new Runnable() {
                             public void run() {
 
+                                //Run some tasks here....
                                 timerCount++;
-                                if (timerCount < timeSlotList.size()) {
+                                getDeviceTime();
+                                /*if (timerCount < timeSlotList.size()) {
                                     String startingTime = timeSlotList.get(timerCount);
                                     String time = startingTime.substring(0, 5);
                                     Log.i(TAG, "Timer duration: " + time);
-
                                     getDeviceTime();
-                                }
+                                }*/
                             }
                         });
 
@@ -972,5 +996,9 @@ public class AdDisplayActivity extends AppCompatActivity {
     }
 
     public static String Name = "NAME";
-    public static String CardNumber = "CARD_NUMBER";
+    public static String UserCardNumber = "CARD_NUMBER";
+    public static String UserCardType = "CARD_TYPE";
+    public static String UserCardStatus = "CARD_STATUS";
+    public static String IsInvalid = "INVALID";
+    public static String IsExpired = "EXPIRED";
 }

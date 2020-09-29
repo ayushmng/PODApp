@@ -11,7 +11,6 @@ import androidx.cardview.widget.CardView;
 import androidx.constraintlayout.widget.ConstraintLayout;
 
 import np.com.bottle.podapp.R;
-import np.com.bottle.podapp.util.Constants;
 import soup.neumorphism.NeumorphCardView;
 import soup.neumorphism.NeumorphFloatingActionButton;
 import soup.neumorphism.ShapeType;
@@ -24,8 +23,11 @@ public class EntranceVerificationActivity extends AppCompatActivity {
     NeumorphCardView enterButton;
     TextView numOfVisitors, backButton, buttonText, cardHolderName, cardType, cardNumber, logout, validityInfo, validityDetails;
 
-    String name, number;
-    Integer visitors;
+    Boolean isInvalid;
+    //TODO: Make change here and remove boolean value initialization
+    Boolean isExpired;
+    String name, card_num;
+    Integer visitors, card_type, card_status;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -34,10 +36,16 @@ public class EntranceVerificationActivity extends AppCompatActivity {
         findViewsById();
 
         name = getIntent().getStringExtra(AdDisplayActivity.Name);
-        number = getIntent().getStringExtra(AdDisplayActivity.CardNumber);
-        cardHolderName.setText(name);
-        cardNumber.setText(number);
+        card_num = getIntent().getStringExtra(AdDisplayActivity.UserCardNumber);
+        card_type = getIntent().getIntExtra(AdDisplayActivity.UserCardType, 0);
+        card_status = getIntent().getIntExtra(AdDisplayActivity.UserCardStatus, 0);
+        isInvalid = getIntent().getBooleanExtra(AdDisplayActivity.IsInvalid, false);
+        isExpired = getIntent().getBooleanExtra(AdDisplayActivity.IsExpired, false);
 
+        cardHolderName.setText(name);
+        cardNumber.setText(card_num);
+
+        setCardDesign(card_type);
         isCardExpiredOrInvalid();
 
         visitors = Integer.valueOf(numOfVisitors.getText().toString());
@@ -89,39 +97,55 @@ public class EntranceVerificationActivity extends AppCompatActivity {
     }
 
     private void isCardExpiredOrInvalid() {
-        if (Constants.IS_CARD_EXPIRED) {
+        if (isExpired) {
             invalidLayout.setVisibility(View.VISIBLE);
             validLayout.setVisibility(View.GONE);
-            invalidLayout.setBackgroundResource(R.drawable.expired_card);
+            validDetails.setVisibility(View.GONE);
             invalidDetails.setVisibility(View.VISIBLE);
-
+            backButton.setVisibility(View.VISIBLE);
+            invalidLayout.setBackgroundResource(R.drawable.expired_card);
             validityInfo.setText(R.string.expired_card);
             validityDetails.setText(R.string.expired_card_details);
 
-        } else if (Constants.IS_CARD_INVALID) {
+        } else if (isInvalid || card_type == 0 || card_status == 0 || card_status == 2) {
             invalidLayout.setVisibility(View.VISIBLE);
+            validDetails.setVisibility(View.GONE);
             validLayout.setVisibility(View.GONE);
+            invalidDetails.setVisibility(View.VISIBLE);
+            backButton.setVisibility(View.VISIBLE);
             invalidLayout.setBackgroundResource(R.drawable.invalid_card);
-
             validityInfo.setText(R.string.invalid_card);
             validityDetails.setText(R.string.invalid_card_details);
+
         } else {
+            validDetails.setVisibility(View.VISIBLE);
             validLayout.setVisibility(View.VISIBLE);
+            invalidDetails.setVisibility(View.GONE);
             invalidLayout.setVisibility(View.GONE);
+            backButton.setVisibility(View.GONE);
         }
     }
 
-    private void setCardDesign(String cardName) {
-        switch (cardName) {
-            case "diamond":
+    @SuppressLint("UseCompatLoadingForColorStateLists")
+    private void setCardDesign(int card_type) {
+
+        switch (card_type) {
+            case 1:
                 cardView.setBackgroundTintList(getResources().getColorStateList(R.color.dark_gray));
+                cardType.setText(R.string.diamond);
                 break;
 
-            case "platinum":
+            case 2:
                 cardView.setBackgroundTintList(getResources().getColorStateList(R.color.gray));
+                cardType.setText(R.string.platinum);
                 break;
-            case "gold":
-                cardView.setBackgroundTintList(getResources().getColorStateList(R.color.dark_gray));
+
+            case 3:
+                cardView.setBackgroundTintList(getResources().getColorStateList(R.color.gold));
+                cardType.setTextColor(getResources().getColor(R.color.dark_gray));
+                cardType.setText(R.string.gold);
+                cardNumber.setTextColor(getResources().getColor(R.color.dark_gray));
+                cardHolderName.setTextColor(getResources().getColor(R.color.dark_gray));
                 break;
         }
     }
@@ -191,14 +215,20 @@ public class EntranceVerificationActivity extends AppCompatActivity {
         @SuppressLint("SetTextI18n")
         @Override
         public void onClick(View view) {
-            incrementBtn.setVisibility(View.VISIBLE);
-            decreaseBtn.setVisibility(View.VISIBLE);
 
-            numOfVisitors.setTextSize(TypedValue.COMPLEX_UNIT_SP, 48);
-            numOfVisitors.setTextColor(getResources().getColor(R.color.dark_gray));
+            if (isExpired || isInvalid) {
+                onBackPressed();
+            } else {
+                incrementBtn.setVisibility(View.VISIBLE);
+                decreaseBtn.setVisibility(View.VISIBLE);
 
-            buttonText.setText("ENTER");
-            backButton.setVisibility(View.GONE);
+                numOfVisitors.setTextSize(TypedValue.COMPLEX_UNIT_SP, 48);
+                numOfVisitors.setTextColor(getResources().getColor(R.color.dark_gray));
+
+                buttonText.setText("ENTER");
+                backButton.setVisibility(View.GONE);
+            }
+
         }
     };
 
