@@ -67,6 +67,7 @@ import np.com.bottle.podapp.adapter.MediaContentAdapter;
 import np.com.bottle.podapp.fragment.EnterPinFragment;
 import np.com.bottle.podapp.fragment.NfcDetectFragment;
 import np.com.bottle.podapp.models.Media;
+import np.com.bottle.podapp.models.TimeSlot;
 import np.com.bottle.podapp.nfc.KeyInfoProvider;
 import np.com.bottle.podapp.nfc.NfcAppKeys;
 import np.com.bottle.podapp.nfc.NfcFileType;
@@ -91,6 +92,8 @@ public class AdDisplayActivity extends AppCompatActivity {
     PendingIntent alarmIntent;
     BroadcastReceiver alarmReceiver;
 
+    JSONArray mediaJsonArray = new JSONArray();
+
     //AdView
     private boolean isVideoPlaying = false;
     private String dayOfTheWeek;
@@ -114,7 +117,8 @@ public class AdDisplayActivity extends AppCompatActivity {
     private static int NUM_PAGES = 0;
     private List<Media> mediaList;
 
-    private List<String> timeSlotList;
+    private List<TimeSlot> timeSlotList;
+    //    private List<String> timeSlotList;
     int timerCount = 0;
 
     private MediaContentAdapter mediaContentAdapter;
@@ -166,6 +170,7 @@ public class AdDisplayActivity extends AppCompatActivity {
         initializedLibrary();
         initializeKeys();
         initializeMedia();
+
 //        deviceMetrics();
 //        setTimeSlot(10, 58);
 
@@ -204,7 +209,7 @@ public class AdDisplayActivity extends AppCompatActivity {
                         Log.i(TAG, "Timer Completed");
                         timerCount++;
                         if (timerCount < timeSlotList.size()) {
-                            String startingTime = timeSlotList.get(timerCount);
+                            String startingTime = timeSlotList.get(timerCount).timeSlot;
                             String time = startingTime.substring(0, 5);
                             Log.i(TAG, "Timer duration: " + time);
                             setTimeSlot(time, 1);
@@ -501,9 +506,9 @@ public class AdDisplayActivity extends AppCompatActivity {
 
         //------------------------------------------------------------//
 
-        timeSlotList.add("12:26 - 15:53");
-        timeSlotList.add("12:27 - 15:47");
-        timeSlotList.add("12:28 - 15:50");
+//        timeSlotList.add("12:26 - 15:53");
+//        timeSlotList.add("12:27 - 15:47");
+//        timeSlotList.add("12:28 - 15:50");
 
         /*timerCount++;
         if (timerCount < timeSlotList.size()) {
@@ -522,6 +527,7 @@ public class AdDisplayActivity extends AppCompatActivity {
             JSONObject jPayload = new JSONObject(contentData);
             JSONArray jaData = jPayload.getJSONArray("data");
 
+            mediaJsonArray = jaData;
             contentDate = jPayload.getString("createdAt");
 
             Log.d(TAG, "data: " + jPayload.getString("data"));
@@ -532,7 +538,7 @@ public class AdDisplayActivity extends AppCompatActivity {
                 JSONArray jaContents = jaData.getJSONObject(i).getJSONArray("contents");
                 JSONArray jTimeSlot = jaData.getJSONObject(i).getJSONArray("time_slot");
 
-                for (int j = 0; j < jaContents.length(); j++) {
+                /*for (int j = 0; j < jaContents.length(); j++) {
                     JSONObject jContent = jaContents.getJSONObject(j);
                     Log.d(TAG, "Level: " + i + " ---- " + "Name: " + jContent.getString("name"));
 
@@ -542,13 +548,22 @@ public class AdDisplayActivity extends AppCompatActivity {
                             jContent.getString("type"),
                             jaData.getJSONObject(i).getInt("level")
                     ));
-                }
+                }*/
+
+                //TODO: Remove the below line:
+                timeSlotList.add(new TimeSlot("13-14", 0));
+                timeSlotList.add(new TimeSlot("14-15", 1));
+                timeSlotList.add(new TimeSlot("15-16", 0));
+                timeSlotList.add(new TimeSlot("16-17", 1));
+                timeSlotList.add(new TimeSlot("17-18", 0));
 
                 //Adds timeSlot from JSON data
-                for (int k = 0; k < jTimeSlot.length(); k++) {
-//                    timeSlotList.add(jTimeSlot.getString(k));
-                    Log.i(TAG, "Time Slot: " + timeSlotList.get(k));
-                }
+                //TODO: Uncomment the below line:
+                /*for (int k = 0; k < jTimeSlot.length(); k++) {
+                    timeSlotList.add(new TimeSlot(jTimeSlot.getString(k), jaData.getJSONObject(i).getInt("level")));
+                    Log.i(TAG, "Time Slot: " + timeSlotList.get(k).timeSlot);
+                }*/
+
             }
 
         } catch (JSONException e) {
@@ -731,17 +746,17 @@ public class AdDisplayActivity extends AppCompatActivity {
     }
 
     public void getDeviceTime() {
-
         /*String startingTime = timeSlotList.get(0);
         int duration = startingTime.charAt(timeSlotList.size() - 1) - startingTime.charAt(0);
         Log.i(TAG, "Duration: " + duration);
 
         int time = Integer.parseInt(startingTime.substring(1, 5));
         Log.i(TAG, "Time duration: " + time);*/
-
         mediaChangeTimer.schedule(new TimerTask() {
             @Override
             public void run() {
+
+                int level;
 
                 Calendar calendar = Calendar.getInstance(Locale.getDefault());
                 String hour = String.valueOf(calendar.get(Calendar.HOUR_OF_DAY));
@@ -755,8 +770,15 @@ public class AdDisplayActivity extends AppCompatActivity {
 
                 String deviceTime = hour + ":" + minute;
 
+                Log.d(TAG, "Timer Slot size: " + timeSlotList.size());
+
                 if (timerCount < timeSlotList.size()) {
-                    String startingTime = timeSlotList.get(timerCount);
+
+                    level = timeSlotList.get(timerCount).level;
+                    Log.d(TAG, "Level: " + level);
+                    Log.d(TAG, "Timer Count: " + timerCount);
+
+                    String startingTime = timeSlotList.get(timerCount).timeSlot;
                     String time = "";
                     if (startingTime.length() > 5) {
                         time = startingTime.substring(0, 5);
@@ -772,9 +794,35 @@ public class AdDisplayActivity extends AppCompatActivity {
                         runOnUiThread(new Runnable() {
                             public void run() {
 
-                                //Run some tasks here....
+                                for (int i = 0; i < mediaJsonArray.length(); i++) {
+                                    JSONArray jaContents = null;
+                                    try {
+                                        jaContents = mediaJsonArray.getJSONObject(i).getJSONArray("contents");
+
+                                        for (int j = 0; j < jaContents.length(); j++) {
+                                            //TODO: Changed here
+                                            JSONObject jContent = jaContents.getJSONObject(level);
+                                            Log.d(TAG, "Level: " + i + " ---- " + "Name: " + jContent.getString("name"));
+
+                                            mediaList.add(new Media(
+                                                    Uri.parse(getFilesDir().getAbsolutePath() + "/content/" + dayOfTheWeek + "/" + jContent.getString("name") + "." + jContent.getString("extension")),
+                                                    jContent.getInt("interval"),
+                                                    jContent.getString("type"),
+                                                    mediaJsonArray.getJSONObject(i).getInt("level")
+                                            ));
+
+                                        }
+
+                                    } catch (JSONException e) {
+                                        e.printStackTrace();
+                                    }
+
+                                }
+
                                 timerCount++;
                                 getDeviceTime();
+
+
                                 /*if (timerCount < timeSlotList.size()) {
                                     String startingTime = timeSlotList.get(timerCount);
                                     String time = startingTime.substring(0, 5);
