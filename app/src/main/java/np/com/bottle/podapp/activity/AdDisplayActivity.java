@@ -92,8 +92,6 @@ public class AdDisplayActivity extends AppCompatActivity {
     PendingIntent alarmIntent;
     BroadcastReceiver alarmReceiver;
 
-    JSONArray mediaJsonArray = new JSONArray();
-
     //AdView
     private boolean isVideoPlaying = false;
     private String dayOfTheWeek;
@@ -123,6 +121,7 @@ public class AdDisplayActivity extends AppCompatActivity {
 
     private MediaContentAdapter mediaContentAdapter;
     private Timer mediaChangeTimer = new Timer();
+    private Timer deviceTimer = new Timer();
     private int count = 0;
     private int tempCount = 0;
 
@@ -155,12 +154,12 @@ public class AdDisplayActivity extends AppCompatActivity {
         mPager = findViewById(R.id.vpAdContent);
 
         //Disables scrolling behaviour
-        mPager.setOnTouchListener(new View.OnTouchListener() {
+        /*mPager.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View view, MotionEvent motionEvent) {
                 return true;
             }
-        });
+        });*/
 
         @SuppressLint("SimpleDateFormat") SimpleDateFormat sdf = new SimpleDateFormat("EEEE");
         Date d = new Date();
@@ -495,7 +494,15 @@ public class AdDisplayActivity extends AppCompatActivity {
         // Only for debugging purpose.
         Helper.fileCount(getFilesDir().getAbsolutePath() + "/content");
 
-        populateMedia(contentPref.getString(ContentPreferences.CONTENT_DATA));
+        //TODO: Remove the below line:
+        timeSlotList.add(new TimeSlot("14-15", 1));
+        timeSlotList.add(new TimeSlot("15-16", 0));
+        timeSlotList.add(new TimeSlot("16-17", 1));
+        timeSlotList.add(new TimeSlot("17-18", 0));
+        timeSlotList.add(new TimeSlot("18-19", 1));
+
+//        populateMedia();
+        getDeviceTime();
 
         Log.d(TAG, "----- content data: " + contentPref.getString(ContentPreferences.CONTENT_DATA));
         Log.d(TAG, "----- content count: " + mediaList.size());
@@ -504,39 +511,43 @@ public class AdDisplayActivity extends AppCompatActivity {
         mPager.setAdapter(mediaContentAdapter);
         NUM_PAGES = mediaList.size();
 
-        //------------------------------------------------------------//
-
-//        timeSlotList.add("12:26 - 15:53");
-//        timeSlotList.add("12:27 - 15:47");
-//        timeSlotList.add("12:28 - 15:50");
-
-        /*timerCount++;
-        if (timerCount < timeSlotList.size()) {
-            String startingTime = timeSlotList.get(timerCount);
-            String time = startingTime.substring(0, 5);
-            Log.i(TAG, "Timer duration: " + time);
-            setTimeSlot(time, 1);
-        }*/
-
     }
 
-    private void populateMedia(String contentData) {
+    private void populateMedia(int level) {
         mediaList.clear();
 
         try {
-            JSONObject jPayload = new JSONObject(contentData);
+            JSONObject jPayload = new JSONObject(contentPref.getString(ContentPreferences.CONTENT_DATA));
             JSONArray jaData = jPayload.getJSONArray("data");
 
-            mediaJsonArray = jaData;
             contentDate = jPayload.getString("createdAt");
 
             Log.d(TAG, "data: " + jPayload.getString("data"));
             Log.d(TAG, "array: " + jaData.getJSONObject(0));
             Log.d(TAG, "data array length: " + jaData.length());
 
-            for (int i = 0; i < jaData.length(); i++) {
-                JSONArray jaContents = jaData.getJSONObject(i).getJSONArray("contents");
-                JSONArray jTimeSlot = jaData.getJSONObject(i).getJSONArray("time_slot");
+//            JSONArray jTimeSlot = jaData.getJSONObject(i).getJSONArray("time_slot");
+
+            try {
+                JSONArray jaContents = jaData.getJSONObject(level).getJSONArray("contents");
+
+                for (int j = 0; j < jaContents.length(); j++) {
+                    //TODO: Changed here
+                    JSONObject jContent = jaContents.getJSONObject(j);
+                    Log.d(TAG, "Level: " + level + " ---- " + "Name: " + jContent.getString("name"));
+
+                    mediaList.add(new Media(
+                            Uri.parse(getFilesDir().getAbsolutePath() + "/content/" + dayOfTheWeek + "/" + jContent.getString("name") + "." + jContent.getString("extension")),
+                            jContent.getInt("interval"),
+                            jContent.getString("type"),
+                            jaData.getJSONObject(level).getInt("level")
+                    ));
+
+                }
+
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
 
                 /*for (int j = 0; j < jaContents.length(); j++) {
                     JSONObject jContent = jaContents.getJSONObject(j);
@@ -550,21 +561,12 @@ public class AdDisplayActivity extends AppCompatActivity {
                     ));
                 }*/
 
-                //TODO: Remove the below line:
-                timeSlotList.add(new TimeSlot("13-14", 0));
-                timeSlotList.add(new TimeSlot("14-15", 1));
-                timeSlotList.add(new TimeSlot("15-16", 0));
-                timeSlotList.add(new TimeSlot("16-17", 1));
-                timeSlotList.add(new TimeSlot("17-18", 0));
-
-                //Adds timeSlot from JSON data
-                //TODO: Uncomment the below line:
+            //Adds timeSlot from JSON data
+            //TODO: Uncomment the below line:
                 /*for (int k = 0; k < jTimeSlot.length(); k++) {
                     timeSlotList.add(new TimeSlot(jTimeSlot.getString(k), jaData.getJSONObject(i).getInt("level")));
                     Log.i(TAG, "Time Slot: " + timeSlotList.get(k).timeSlot);
                 }*/
-
-            }
 
         } catch (JSONException e) {
             Log.e(TAG, "Error in parsing JSON data.");
@@ -731,9 +733,8 @@ public class AdDisplayActivity extends AppCompatActivity {
                         }
                     }, 1000, 1000);
 
-                    getDeviceTime();
-
                 }
+
                 break;
             case STOP:
                 mediaChangeTimer.cancel();
@@ -752,7 +753,7 @@ public class AdDisplayActivity extends AppCompatActivity {
 
         int time = Integer.parseInt(startingTime.substring(1, 5));
         Log.i(TAG, "Time duration: " + time);*/
-        mediaChangeTimer.schedule(new TimerTask() {
+        deviceTimer.schedule(new TimerTask() {
             @Override
             public void run() {
 
@@ -770,8 +771,6 @@ public class AdDisplayActivity extends AppCompatActivity {
 
                 String deviceTime = hour + ":" + minute;
 
-                Log.d(TAG, "Timer Slot size: " + timeSlotList.size());
-
                 if (timerCount < timeSlotList.size()) {
 
                     level = timeSlotList.get(timerCount).level;
@@ -784,7 +783,7 @@ public class AdDisplayActivity extends AppCompatActivity {
                         time = startingTime.substring(0, 5);
                     } else {
                         time = startingTime.substring(0, 2);
-                        deviceTime = startingTime.substring(0, 2);
+                        deviceTime = deviceTime.substring(0, 2);
                     }
 
                     Log.i(TAG, "API time: " + time + " Device Time: " + deviceTime);
@@ -794,34 +793,7 @@ public class AdDisplayActivity extends AppCompatActivity {
                         runOnUiThread(new Runnable() {
                             public void run() {
 
-                                for (int i = 0; i < mediaJsonArray.length(); i++) {
-                                    JSONArray jaContents = null;
-                                    try {
-                                        jaContents = mediaJsonArray.getJSONObject(i).getJSONArray("contents");
-
-                                        for (int j = 0; j < jaContents.length(); j++) {
-                                            //TODO: Changed here
-                                            JSONObject jContent = jaContents.getJSONObject(level);
-                                            Log.d(TAG, "Level: " + i + " ---- " + "Name: " + jContent.getString("name"));
-
-                                            mediaList.add(new Media(
-                                                    Uri.parse(getFilesDir().getAbsolutePath() + "/content/" + dayOfTheWeek + "/" + jContent.getString("name") + "." + jContent.getString("extension")),
-                                                    jContent.getInt("interval"),
-                                                    jContent.getString("type"),
-                                                    mediaJsonArray.getJSONObject(i).getInt("level")
-                                            ));
-
-                                        }
-
-                                    } catch (JSONException e) {
-                                        e.printStackTrace();
-                                    }
-
-                                }
-
-                                timerCount++;
-                                getDeviceTime();
-
+                                populateMedia(level);
 
                                 /*if (timerCount < timeSlotList.size()) {
                                     String startingTime = timeSlotList.get(timerCount);
@@ -832,7 +804,10 @@ public class AdDisplayActivity extends AppCompatActivity {
                             }
                         });
 
+                    } else {
+                        timerCount++;
                     }
+
                 }
 
             }
@@ -854,7 +829,9 @@ public class AdDisplayActivity extends AppCompatActivity {
                 JSONObject payloadData = new JSONObject(strPayload);
                 String createdAt = payloadData.getString("createdAt");
 
-                if (!Helper.compareDate(contentDate) || NUM_PAGES == 0) {
+                if (!Helper.compareDate(contentDate)) {
+//                if (!Helper.compareDate(contentDate) || NUM_PAGES == 0) {
+
                     // Saving content to preference
                     contentPref.putString(ContentPreferences.CONTENT_DATA, strPayload);
 
@@ -944,7 +921,7 @@ public class AdDisplayActivity extends AppCompatActivity {
 
                 if (resultCode == ContentDownloadIntentService.RESULT_CODE_SUCCESS) {
                     Toast.makeText(AdDisplayActivity.this, "File downloaded.", Toast.LENGTH_SHORT).show();
-                    populateMedia(contentPref.getString(ContentPreferences.CONTENT_DATA));
+//                    populateMedia(contentPref.getString(ContentPreferences.CONTENT_DATA));
                     mediaContentAdapter.notifyDataSetChanged();
                     mediaLoop(Constants.MEDIALOOPSTATUS.START);
                 } else {
