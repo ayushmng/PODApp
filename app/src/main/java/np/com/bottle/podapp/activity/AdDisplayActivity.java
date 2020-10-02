@@ -95,7 +95,7 @@ public class AdDisplayActivity extends AppCompatActivity {
     //AdView
     private boolean isVideoPlaying = false;
     private String dayOfTheWeek;
-    private final static int INTERVAL = 1000 * 5; //10 secs
+    private final static int INTERVAL = 1000 * 5; //5 secs
     private final static int INTERVAL2 = 1000 * 60; //1 min
 
     // NFC
@@ -178,7 +178,7 @@ public class AdDisplayActivity extends AppCompatActivity {
 //        handleAdViews();
     }
 
-    private void setTimeSlot(String time, int duration) {
+    /*private void setTimeSlot(String time, int duration) {
 
         // Set the alarm to start at provided time frame
         calendar = Calendar.getInstance();
@@ -226,7 +226,7 @@ public class AdDisplayActivity extends AppCompatActivity {
     private void UnregisterAlarmBroadcast() {
         alarmMgr.cancel(alarmIntent);
         getBaseContext().unregisterReceiver(alarmReceiver);
-    }
+    }*/
 
     private void handleAdViews() {
         // Helps to display Lotte animation at first for 10sec
@@ -495,11 +495,11 @@ public class AdDisplayActivity extends AppCompatActivity {
         Helper.fileCount(getFilesDir().getAbsolutePath() + "/content");
 
         //TODO: Remove the below line:
+        timeSlotList.add(new TimeSlot("12-13", 1));
+        timeSlotList.add(new TimeSlot("13-14", 0));
         timeSlotList.add(new TimeSlot("14-15", 1));
         timeSlotList.add(new TimeSlot("15-16", 0));
-        timeSlotList.add(new TimeSlot("16-17", 1));
-        timeSlotList.add(new TimeSlot("17-18", 0));
-        timeSlotList.add(new TimeSlot("18-19", 1));
+//        timeSlotList.add(new TimeSlot("18-19", 1));
 
 //        populateMedia();
         getDeviceTime();
@@ -774,9 +774,8 @@ public class AdDisplayActivity extends AppCompatActivity {
                 if (timerCount < timeSlotList.size()) {
 
                     level = timeSlotList.get(timerCount).level;
-                    Log.d(TAG, "Level: " + level);
-                    Log.d(TAG, "Timer Count: " + timerCount);
-
+//                    Log.d(TAG, "Level: " + level);
+//                    Log.d(TAG, "Timer Count: " + timerCount)
                     String startingTime = timeSlotList.get(timerCount).timeSlot;
                     String time = "";
                     if (startingTime.length() > 5) {
@@ -786,23 +785,20 @@ public class AdDisplayActivity extends AppCompatActivity {
                         deviceTime = deviceTime.substring(0, 2);
                     }
 
+                    if (time.substring(time.length() - 1).equals("-")) {
+                        time = "0" + time.substring(0, time.length() - 1);
+                    }
+
                     Log.i(TAG, "API time: " + time + " Device Time: " + deviceTime);
 
                     if (deviceTime.equals(time)) {
 
-                        runOnUiThread(new Runnable() {
+                        populateMedia(level);
+
+                        /*runOnUiThread(new Runnable() {
                             public void run() {
-
-                                populateMedia(level);
-
-                                /*if (timerCount < timeSlotList.size()) {
-                                    String startingTime = timeSlotList.get(timerCount);
-                                    String time = startingTime.substring(0, 5);
-                                    Log.i(TAG, "Timer duration: " + time);
-                                    getDeviceTime();
-                                }*/
                             }
-                        });
+                        });*/
 
                     } else {
                         timerCount++;
