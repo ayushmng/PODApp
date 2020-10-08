@@ -1,18 +1,13 @@
 package np.com.bottle.podapp.activity;
 
 import android.annotation.SuppressLint;
-import android.app.AlarmManager;
-import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.net.Uri;
-import android.net.wifi.WifiInfo;
-import android.net.wifi.WifiManager;
 import android.nfc.NfcAdapter;
 import android.os.Bundle;
-import android.os.CountDownTimer;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
@@ -55,7 +50,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
-import java.util.Random;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -86,12 +80,6 @@ public class AdDisplayActivity extends AppCompatActivity {
     private long longPressTime;
     private Context context;
 
-    //TimeSlot
-    Calendar calendar;
-    AlarmManager alarmMgr;
-    PendingIntent alarmIntent;
-    BroadcastReceiver alarmReceiver;
-
     //AdView
     private boolean isVideoPlaying = false;
     private String dayOfTheWeek;
@@ -115,8 +103,10 @@ public class AdDisplayActivity extends AppCompatActivity {
     private static int NUM_PAGES = 0;
     private List<Media> mediaList;
 
+    //TimeSlot
+    int[] timeSlotArrayList = new int[24];
     private List<TimeSlot> timeSlotList;
-    //    private List<String> timeSlotList;
+    ArrayList<String> daysList = new ArrayList<>();
     int timerCount = 0;
 
     private MediaContentAdapter mediaContentAdapter;
@@ -161,72 +151,18 @@ public class AdDisplayActivity extends AppCompatActivity {
             }
         });*/
 
-        @SuppressLint("SimpleDateFormat") SimpleDateFormat sdf = new SimpleDateFormat("EEEE");
-        Date d = new Date();
-        dayOfTheWeek = sdf.format(d);
-
+        setToday(true);
         checkDirectory();
         initializedLibrary();
         initializeKeys();
         initializeMedia();
 
 //        deviceMetrics();
-//        setTimeSlot(10, 58);
 
         lotteLayout.setVisibility(View.GONE);
         mPager.setVisibility(View.VISIBLE);
 //        handleAdViews();
     }
-
-    /*private void setTimeSlot(String time, int duration) {
-
-        // Set the alarm to start at provided time frame
-        calendar = Calendar.getInstance();
-        calendar.set(Calendar.HOUR_OF_DAY, Integer.parseInt(time.substring(0, 2)));
-        calendar.set(Calendar.MINUTE, Integer.parseInt(time.substring(3, 5)));
-        calendar.set(Calendar.MINUTE, 0);
-
-        registerMyAlarmBroadcast(duration);
-        alarmMgr.setExact(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), alarmIntent);
-//        alarmMgr.setRepeating(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(),
-//                AlarmManager.INTERVAL_DAY, alarmIntent);
-
-//        alarmMgr.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), alarmIntent);
-    }
-
-    private void registerMyAlarmBroadcast(int duration) {
-        //Calls when alarm time reached
-        alarmReceiver = new BroadcastReceiver() {
-            @Override
-            public void onReceive(Context context, Intent intent) {
-                new CountDownTimer((1000 * 60 * duration), (1000 * 60 * duration) / 2) {
-                    public void onTick(long millisUntilFinished) {
-                        Log.i(TAG, "Timer Starts : " + millisUntilFinished);
-                    }
-
-                    public void onFinish() {
-                        Log.i(TAG, "Timer Completed");
-                        timerCount++;
-                        if (timerCount < timeSlotList.size()) {
-                            String startingTime = timeSlotList.get(timerCount).timeSlot;
-                            String time = startingTime.substring(0, 5);
-                            Log.i(TAG, "Timer duration: " + time);
-                            setTimeSlot(time, 1);
-                        }
-                    }
-                }.start();
-            }
-        };
-
-        registerReceiver(alarmReceiver, new IntentFilter(ContentDownloadIntentService.NOTIFICATION));
-        alarmIntent = PendingIntent.getBroadcast(this, 0, new Intent(ContentDownloadIntentService.NOTIFICATION), 0);
-        alarmMgr = (AlarmManager) (this.getSystemService(Context.ALARM_SERVICE));
-    }
-
-    private void UnregisterAlarmBroadcast() {
-        alarmMgr.cancel(alarmIntent);
-        getBaseContext().unregisterReceiver(alarmReceiver);
-    }*/
 
     private void handleAdViews() {
         // Helps to display Lotte animation at first for 10sec
@@ -494,22 +430,65 @@ public class AdDisplayActivity extends AppCompatActivity {
         // Only for debugging purpose.
         Helper.fileCount(getFilesDir().getAbsolutePath() + "/content");
 
+        addTimeSlots();
+
         //TODO: Remove the below line:
-        timeSlotList.add(new TimeSlot("12-13", 1));
-        timeSlotList.add(new TimeSlot("13-14", 0));
-        timeSlotList.add(new TimeSlot("14-15", 1));
-        timeSlotList.add(new TimeSlot("15-16", 0));
+       /* timeSlotList.add(new TimeSlot("13:05 - 13", 1));
+        timeSlotList.add(new TimeSlot("13:08 - 14", 0));
+        timeSlotList.add(new TimeSlot("13:10 - 15", 1));
+        timeSlotList.add(new TimeSlot("13:12 - 16", 0));*/
 //        timeSlotList.add(new TimeSlot("18-19", 1));
 
 //        populateMedia();
-        getDeviceTime();
-
-        Log.d(TAG, "----- content data: " + contentPref.getString(ContentPreferences.CONTENT_DATA));
-        Log.d(TAG, "----- content count: " + mediaList.size());
 
         mediaContentAdapter = new MediaContentAdapter(this, mediaList);
         mPager.setAdapter(mediaContentAdapter);
         NUM_PAGES = mediaList.size();
+
+        getDeviceTime();
+        Log.d(TAG, "----- content data: " + contentPref.getString(ContentPreferences.CONTENT_DATA));
+        Log.d(TAG, "----- content count: " + mediaList.size());
+    }
+
+    private void addTimeSlots() {
+
+        try {
+            JSONObject jPayload = new JSONObject(contentPref.getString(ContentPreferences.CONTENT_DATA));
+
+            JSONArray jaData = jPayload.getJSONArray("data");
+            contentDate = jPayload.getString("createdAt");
+
+            for (int i = 0; i < jaData.length(); i++) {
+
+                JSONArray jTimeSlot = jaData.getJSONObject(i).getJSONArray("time_slot");
+
+                for (int k = 0; k < jTimeSlot.length(); k++) {
+
+//                    timeSlotList.add(new TimeSlot(jTimeSlot.getString(k), jaData.getJSONObject(i).getInt("level")));
+//                    Log.i(TAG, "Time Slot: " + timeSlotList.get(k).timeSlot);
+
+                    int level = jaData.getJSONObject(i).getInt("level");
+                    String time = jTimeSlot.getString(k).substring(0, 2);
+
+                    if (time.length() > 5) {
+                        time = time.substring(0, 5);
+                    } else {
+                        time = time.substring(0, 2);
+                    }
+
+                    if (time.substring(time.length() - 1).equals("-")) {
+                        time = "0" + time.substring(0, time.length() - 1);
+                    }
+
+                    timeSlotArrayList[Integer.parseInt(time)] = level;
+                    Log.i(TAG, "New time: " + time);
+                }
+
+            }
+
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
 
     }
 
@@ -519,22 +498,28 @@ public class AdDisplayActivity extends AppCompatActivity {
         try {
             JSONObject jPayload = new JSONObject(contentPref.getString(ContentPreferences.CONTENT_DATA));
             JSONArray jaData = jPayload.getJSONArray("data");
-
             contentDate = jPayload.getString("createdAt");
 
             Log.d(TAG, "data: " + jPayload.getString("data"));
             Log.d(TAG, "array: " + jaData.getJSONObject(0));
             Log.d(TAG, "data array length: " + jaData.length());
 
-//            JSONArray jTimeSlot = jaData.getJSONObject(i).getJSONArray("time_slot");
-
             try {
-                JSONArray jaContents = jaData.getJSONObject(level).getJSONArray("contents");
+                //TODO: Changed here because here the level sent and position won't match
+                JSONArray jaContents;
+                if (level >= 1) {
+                    jaContents = jaData.getJSONObject(level - 1).getJSONArray("contents");
+                } else {
+                    jaContents = jaData.getJSONObject(level).getJSONArray("contents");
+                }
+//                JSONArray jaContents = jaData.getJSONObject(level).getJSONArray("contents");
 
                 for (int j = 0; j < jaContents.length(); j++) {
                     //TODO: Changed here
                     JSONObject jContent = jaContents.getJSONObject(j);
                     Log.d(TAG, "Level: " + level + " ---- " + "Name: " + jContent.getString("name"));
+
+                    Log.i(TAG, "Today is: " + dayOfTheWeek);
 
                     mediaList.add(new Media(
                             Uri.parse(getFilesDir().getAbsolutePath() + "/content/" + dayOfTheWeek + "/" + jContent.getString("name") + "." + jContent.getString("extension")),
@@ -549,25 +534,6 @@ public class AdDisplayActivity extends AppCompatActivity {
                 e.printStackTrace();
             }
 
-                /*for (int j = 0; j < jaContents.length(); j++) {
-                    JSONObject jContent = jaContents.getJSONObject(j);
-                    Log.d(TAG, "Level: " + i + " ---- " + "Name: " + jContent.getString("name"));
-
-                    mediaList.add(new Media(
-                            Uri.parse(getFilesDir().getAbsolutePath() + "/content/" + dayOfTheWeek + "/" + jContent.getString("name") + "." + jContent.getString("extension")),
-                            jContent.getInt("interval"),
-                            jContent.getString("type"),
-                            jaData.getJSONObject(i).getInt("level")
-                    ));
-                }*/
-
-            //Adds timeSlot from JSON data
-            //TODO: Uncomment the below line:
-                /*for (int k = 0; k < jTimeSlot.length(); k++) {
-                    timeSlotList.add(new TimeSlot(jTimeSlot.getString(k), jaData.getJSONObject(i).getInt("level")));
-                    Log.i(TAG, "Time Slot: " + timeSlotList.get(k).timeSlot);
-                }*/
-
         } catch (JSONException e) {
             Log.e(TAG, "Error in parsing JSON data.");
         } catch (Exception ex) {
@@ -577,7 +543,6 @@ public class AdDisplayActivity extends AppCompatActivity {
 
     private void checkDirectory() {
 
-        ArrayList<String> daysList = new ArrayList<>();
         daysList.add("Sunday");
         daysList.add("Monday");
         daysList.add("Tuesday");
@@ -598,8 +563,19 @@ public class AdDisplayActivity extends AppCompatActivity {
             }
         }
 
+        //Setting directory path of yesterday's if today's directory got empty
+        File directory = new File(getFilesDir().getAbsolutePath(), "content/" + dayOfTheWeek);
+        File[] contents = directory.listFiles();
+        if (contents.length == 0) {
+            Log.i(TAG, "Directory is empty");
+            setToday(false);
+        } else {
+            Log.i(TAG, "Directory is not empty");
+            setToday(true);
+        }
+
         // Clearing other days directory media items
-        File dirToDelete;
+        /*File dirToDelete;
         for (String dayDirectory : daysList) {
             if (!dayDirectory.equals(dayOfTheWeek)) {
                 dirToDelete = new File(getFilesDir().getAbsolutePath(), "content/" + dayDirectory);
@@ -612,7 +588,7 @@ public class AdDisplayActivity extends AppCompatActivity {
                     }
                 }
             }
-        }
+        }*/
     }
 
     public void videoPause() {
@@ -624,6 +600,17 @@ public class AdDisplayActivity extends AppCompatActivity {
             player.stop();
             player.seekTo(0);
             player.setPlayWhenReady(false);
+        }
+    }
+
+    private void setToday(boolean isToday) {
+        @SuppressLint("SimpleDateFormat") SimpleDateFormat sdf = new SimpleDateFormat("EEEE");
+        if (isToday) {
+            Date d = new Date();
+            dayOfTheWeek = sdf.format(d);
+        } else {
+            Date date = new Date(System.currentTimeMillis() - (1000 * 60 * 60 * 24));
+            dayOfTheWeek = sdf.format(date);
         }
     }
 
@@ -728,8 +715,6 @@ public class AdDisplayActivity extends AppCompatActivity {
                                 }
                             }
 
-//                            getDeviceTime();
-
                         }
                     }, 1000, 1000);
 
@@ -770,8 +755,10 @@ public class AdDisplayActivity extends AppCompatActivity {
                 }
 
                 String deviceTime = hour + ":" + minute;
+                deviceTime = deviceTime.substring(0, 2);
 
-                if (timerCount < timeSlotList.size()) {
+                populateMedia(timeSlotArrayList[Integer.parseInt(deviceTime)]);
+                /*if (timerCount < timeSlotList.size()) {
 
                     level = timeSlotList.get(timerCount).level;
 //                    Log.d(TAG, "Level: " + level);
@@ -794,20 +781,15 @@ public class AdDisplayActivity extends AppCompatActivity {
                     if (deviceTime.equals(time)) {
 
                         populateMedia(level);
-
-                        /*runOnUiThread(new Runnable() {
-                            public void run() {
-                            }
-                        });*/
+                        timerCount++;
 
                     } else {
-                        timerCount++;
+                        populateMedia(1); //sending level 1 contents as default
                     }
-
-                }
+                }*/
 
             }
-        }, 1000, 1000);
+        }, 1000, 1000 * 60);
 
     }
 
@@ -845,6 +827,8 @@ public class AdDisplayActivity extends AppCompatActivity {
                         }
                     });
                 }
+
+
             } catch (JSONException e) {
                 Log.e(TAG, "JSONException: " + e.getMessage());
             }
@@ -917,9 +901,27 @@ public class AdDisplayActivity extends AppCompatActivity {
 
                 if (resultCode == ContentDownloadIntentService.RESULT_CODE_SUCCESS) {
                     Toast.makeText(AdDisplayActivity.this, "File downloaded.", Toast.LENGTH_SHORT).show();
+                    setToday(true); // Setting day as same day if the file gets download
 //                    populateMedia(contentPref.getString(ContentPreferences.CONTENT_DATA));
                     mediaContentAdapter.notifyDataSetChanged();
                     mediaLoop(Constants.MEDIALOOPSTATUS.START);
+
+                    // Clearing other days directory media items
+                    File dirToDelete;
+                    for (String dayDirectory : daysList) {
+                        if (!dayDirectory.equals(dayOfTheWeek)) {
+                            dirToDelete = new File(getFilesDir().getAbsolutePath(), "content/" + dayDirectory);
+                            if (dirToDelete.isDirectory()) {
+                                String[] children = dirToDelete.list();
+                                assert children != null;
+                                for (int i = 0; i < children.length; i++) {
+                                    new File(dirToDelete, children[i]).delete();
+                                    Log.i("File Name", children[i]);
+                                }
+                            }
+                        }
+                    }
+
                 } else {
                     Toast.makeText(AdDisplayActivity.this, "File downloaded Error.", Toast.LENGTH_SHORT).show();
                 }
@@ -936,43 +938,6 @@ public class AdDisplayActivity extends AppCompatActivity {
     };
 
     // endregion
-
-    // Device Health
-    public void deviceMetrics() {
-        // Todo: Device metrics [CPU usage, temperature, RAM usage] need to be implemented.
-        TimerTask healthTimerTask = new TimerTask() {
-            @Override
-            public void run() {
-                try {
-                    WifiManager wifiManager = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
-                    WifiInfo wifiInfo = wifiManager.getConnectionInfo();
-                    String payload = Helper.generateMqttDeviceHealthPayload(
-                            appPref.getString(AppPreferences.DEVICE_ID),
-                            Constants.PAYLOAD_TYPE_HEALTH,
-                            appPref.getString(AppPreferences.FLEET_ID),
-                            Integer.toString(new Random().nextInt(956) + 128) + "mb", // Dummy value
-                            Integer.toString(new Random().nextInt(85) + 15) + "%", // Dummy value
-                            Integer.toString(new Random().nextInt(45)) + "c", // Dummy value. Float.toString(Helper.getCurrentCPUTemperatureInCelcius())
-                            Integer.toString(wifiInfo.getRssi()),
-                            Integer.toString(new Random().nextInt(5) + 1) + "mbps", // Dummy value
-                            Integer.toString(new Random().nextInt(10) + 1) + "mbps", // Dummy value
-                            "",
-                            ""
-                    );
-                    Log.d(TAG, "Health: " + payload);
-                    Log.d(TAG, "temp: " + Helper.getCurrentCPUTemperatureInCelcius());
-                    if (appClass.isAWSConnected) {
-                        publishMsg(Constants.TOPIC_TELEMETRY_PUB, payload);
-                    }
-                } catch (Exception e) {
-                    Log.e(TAG, "Health data error: " + e.getMessage());
-                }
-            }
-        };
-
-        healthTimer.schedule(healthTimerTask, 1000, 15000);
-
-    }
 
     @Override
     public boolean dispatchTouchEvent(@NotNull MotionEvent event) {
