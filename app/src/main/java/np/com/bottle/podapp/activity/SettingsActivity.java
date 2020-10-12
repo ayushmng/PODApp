@@ -155,7 +155,7 @@ public class SettingsActivity extends AppCompatActivity implements OnItemClickLi
                 mWifiManager.startScan();
             }
         };
-        timer.schedule(timerTask, 1000, 10000);
+        timer.schedule(timerTask, 1000, 1000 * 10); // Scans wifi in every 10secs
 
         swKiosk.setOnCheckedChangeListener(swKioskClickListener);
         btnClearContent.setOnClickListener(btnClearContentListener);
@@ -242,6 +242,9 @@ public class SettingsActivity extends AppCompatActivity implements OnItemClickLi
 //        deviceDetailList.add(new DataList(AppPreferences.DEVICE_URI, appPref.getString(AppPreferences.DEVICE_URI)));
     }
 
+    /**
+     * Opens the password entering dialog box
+     * */
     @Override
     public void onItemClicked(ScanResult scanResult) {
         selectedScanResult = scanResult;
@@ -312,14 +315,18 @@ public class SettingsActivity extends AppCompatActivity implements OnItemClickLi
         }
     }
 
+
+    /**
+     * ViewPager used for displaying device details
+     * */
     private void setupViewPager() {
 
         fragmentAdapter = new ViewPagerFragmentAdapter(this, deviceDetailList);
         viewPager.setAdapter(fragmentAdapter);
 
         viewPager.isNestedScrollingEnabled();
-        int size = Math.round(deviceDetailList.size() / Constants.ITEMS_PER_PAGE);
-        pageIndicatorView.setCount(size);
+        int size = Math.round(deviceDetailList.size() / Constants.ITEMS_PER_PAGE); // Dividing total list my items per page
+        pageIndicatorView.setCount(size); //Sets how many pages are required
 
         viewPager.registerOnPageChangeCallback(new ViewPager2.OnPageChangeCallback() {
             @Override

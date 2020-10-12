@@ -35,6 +35,7 @@ public class EntranceVerificationActivity extends AppCompatActivity {
         setContentView(R.layout.activity_entrance_verificaiton);
         findViewsById();
 
+        //Obtaining data from AdDisplayActivity
         name = getIntent().getStringExtra(AdDisplayActivity.Name);
         card_num = getIntent().getStringExtra(AdDisplayActivity.UserCardNumber);
         card_type = getIntent().getIntExtra(AdDisplayActivity.UserCardType, 0);
@@ -48,6 +49,7 @@ public class EntranceVerificationActivity extends AppCompatActivity {
         setCardDesign(card_type);
         isCardExpiredOrInvalid();
 
+        //Manually setting number of maximum visitors as 3 and minimum as 1
         visitors = Integer.valueOf(numOfVisitors.getText().toString());
         if (visitors == 3) {
             decreaseBtn.setShapeType(ShapeType.DEFAULT);
@@ -96,6 +98,7 @@ public class EntranceVerificationActivity extends AppCompatActivity {
         logout = findViewById(R.id.logout);
     }
 
+    // Providing info. to layout according to the card status
     private void isCardExpiredOrInvalid() {
         if (isExpired) {
             invalidLayout.setVisibility(View.VISIBLE);
@@ -126,6 +129,8 @@ public class EntranceVerificationActivity extends AppCompatActivity {
         }
     }
 
+    // Displaying card design acc. to the card type
+    // if card_type is 1 -> Diamond, 2 -> Platinum and 3 -> Gold
     @SuppressLint("UseCompatLoadingForColorStateLists")
     private void setCardDesign(int card_type) {
 
@@ -150,6 +155,7 @@ public class EntranceVerificationActivity extends AppCompatActivity {
         }
     }
 
+    // Changing UI acc. to button pressed
     private View.OnClickListener incrementClickListener = new View.OnClickListener() {
         @SuppressLint("SetTextI18n")
         @Override

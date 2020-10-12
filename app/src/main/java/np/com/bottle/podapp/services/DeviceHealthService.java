@@ -444,8 +444,7 @@ public class DeviceHealthService extends IntentService implements SensorEventLis
 
             mStartRX = TrafficStats.getTotalRxBytes();
             mStartTX = TrafficStats.getTotalTxBytes();
-
-            Log.i(TAG, "UploadSpeed: " + uplink + " DownloadSpeed: " + downlink);
+//            Log.i(TAG, "UploadSpeed: " + uplink + " DownloadSpeed: " + downlink);
         }
     }
 

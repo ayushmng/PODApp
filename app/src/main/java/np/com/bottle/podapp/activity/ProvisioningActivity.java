@@ -162,7 +162,6 @@ public class ProvisioningActivity extends AppCompatActivity implements Websocket
 
         Log.d(TAG, "Device ID: " + data.getString(AppPreferences.DEVICE_ID));
 
-
         appPref.putString(AppPreferences.ACTIVATION_CODE, data.getString(AppPreferences.ACTIVATION_CODE));
         appPref.putString(AppPreferences.FLEET_ID, data.getString(AppPreferences.FLEET_ID));
         appPref.putString(AppPreferences.ORGANISATION_ID, data.getString(AppPreferences.ORGANISATION_ID));

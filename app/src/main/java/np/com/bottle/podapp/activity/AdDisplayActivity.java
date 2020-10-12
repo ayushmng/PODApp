@@ -157,11 +157,11 @@ public class AdDisplayActivity extends AppCompatActivity {
         initializeKeys();
         initializeMedia();
 
-//        deviceMetrics();
-
         lotteLayout.setVisibility(View.GONE);
         mPager.setVisibility(View.VISIBLE);
 //        handleAdViews();
+
+        viewPagerChangeListener();
     }
 
     private void handleAdViews() {
@@ -441,13 +441,14 @@ public class AdDisplayActivity extends AppCompatActivity {
 
 //        populateMedia();
 
+        getDeviceTime();
+        Log.d(TAG, "----- content data: " + contentPref.getString(ContentPreferences.CONTENT_DATA));
+        Log.d(TAG, "----- content count: " + mediaList.size());
+
         mediaContentAdapter = new MediaContentAdapter(this, mediaList);
         mPager.setAdapter(mediaContentAdapter);
         NUM_PAGES = mediaList.size();
 
-        getDeviceTime();
-        Log.d(TAG, "----- content data: " + contentPref.getString(ContentPreferences.CONTENT_DATA));
-        Log.d(TAG, "----- content count: " + mediaList.size());
     }
 
     private void addTimeSlots() {
@@ -463,10 +464,8 @@ public class AdDisplayActivity extends AppCompatActivity {
                 JSONArray jTimeSlot = jaData.getJSONObject(i).getJSONArray("time_slot");
 
                 for (int k = 0; k < jTimeSlot.length(); k++) {
-
 //                    timeSlotList.add(new TimeSlot(jTimeSlot.getString(k), jaData.getJSONObject(i).getInt("level")));
 //                    Log.i(TAG, "Time Slot: " + timeSlotList.get(k).timeSlot);
-
                     int level = jaData.getJSONObject(i).getInt("level");
                     String time = jTimeSlot.getString(k).substring(0, 2);
 
@@ -519,8 +518,6 @@ public class AdDisplayActivity extends AppCompatActivity {
                     JSONObject jContent = jaContents.getJSONObject(j);
                     Log.d(TAG, "Level: " + level + " ---- " + "Name: " + jContent.getString("name"));
 
-                    Log.i(TAG, "Today is: " + dayOfTheWeek);
-
                     mediaList.add(new Media(
                             Uri.parse(getFilesDir().getAbsolutePath() + "/content/" + dayOfTheWeek + "/" + jContent.getString("name") + "." + jContent.getString("extension")),
                             jContent.getInt("interval"),
@@ -541,6 +538,10 @@ public class AdDisplayActivity extends AppCompatActivity {
         }
     }
 
+
+    /**
+    * Adding days list to create directory acc. to same day
+    * */
     private void checkDirectory() {
 
         daysList.add("Sunday");
@@ -552,6 +553,8 @@ public class AdDisplayActivity extends AppCompatActivity {
         daysList.add("Saturday");
 
         //Creating directories with 7 days name
+        // If directory exists when the app started it goes to else state,
+        // otherwise create directory from if state.
         File dir;
         for (int i = 0; i < 7; i++) {
             dir = new File(getFilesDir().getAbsolutePath(), "content/" + daysList.get(i));
@@ -573,24 +576,14 @@ public class AdDisplayActivity extends AppCompatActivity {
             Log.i(TAG, "Directory is not empty");
             setToday(true);
         }
-
-        // Clearing other days directory media items
-        /*File dirToDelete;
-        for (String dayDirectory : daysList) {
-            if (!dayDirectory.equals(dayOfTheWeek)) {
-                dirToDelete = new File(getFilesDir().getAbsolutePath(), "content/" + dayDirectory);
-                if (dirToDelete.isDirectory()) {
-                    String[] children = dirToDelete.list();
-                    assert children != null;
-                    for (int i = 0; i < children.length; i++) {
-                        new File(dirToDelete, children[i]).delete();
-                        Log.i("File Name", children[i]);
-                    }
-                }
-            }
-        }*/
     }
 
+    /**
+     * Helps to pause video from activity rather than adapter class,
+     * it is done so to communicate the view pager with media or video
+     *
+     * Poor communication in adapter about video leads to perform such operations here
+     * */
     public void videoPause() {
         View myView = mPager.findViewWithTag(mPager.getCurrentItem());
         PlayerView playerView = myView.findViewById(R.id.pvVideo);
@@ -603,6 +596,10 @@ public class AdDisplayActivity extends AppCompatActivity {
         }
     }
 
+    /**
+    * @param isToday sets the String dayOfTheWeek as today's or yesterday's day
+     *                if true sets Today's day or Yesterday's day
+    * */
     private void setToday(boolean isToday) {
         @SuppressLint("SimpleDateFormat") SimpleDateFormat sdf = new SimpleDateFormat("EEEE");
         if (isToday) {
@@ -636,67 +633,6 @@ public class AdDisplayActivity extends AppCompatActivity {
                             }
                             mPager.setCurrentItem(currentPage, true);
                             Log.d(TAG, "currentPage: --- " + currentPage);
-
-                            mPager.addOnPageChangeListener(new ViewPager.OnPageChangeListener() {
-                                @Override
-                                public void onPageScrolled(int position, float positionOffset, int positionOffsetPixels) {
-                                    Log.i("ScrollState", "OnScrolled");
-
-                                    position = mPager.getCurrentItem();
-
-                                    if (mediaList.get(position).MediaType.equals(Media.MEDIA_TYPE_VIDEO)) {
-                                        View view = mPager.findViewWithTag(position);
-                                        PlayerView playerView = view.findViewById(R.id.pvVideo);
-                                        Player player = playerView.getPlayer();
-
-                                        if (player != null) {
-                                            player.addListener(new Player.DefaultEventListener() {
-                                                @Override
-                                                public void onPlayerStateChanged(boolean playWhenReady, int playbackState) {
-                                                    if (playWhenReady && playbackState == Player.STATE_READY) {
-                                                        // media actually playing
-                                                        Log.i(TAG, "Video is playing");
-                                                    } else if (playWhenReady) {
-//                                                        videoPause();
-                                                        Log.i(TAG, "Video is buffering");
-                                                        // might be idle (plays after prepare()),
-                                                        // buffering (plays when data available)
-                                                        // or ended (plays when seek away from end)
-                                                    } else {
-                                                        Log.i(TAG, "Video is paused");
-                                                        // player paused in any state
-                                                    }
-                                                }
-                                            });
-                                        }
-
-                                    }
-                                }
-
-                                @Override
-                                public void onPageSelected(int position) {
-                                    Log.i("ScrollState", "OnPageSelected");
-                                }
-
-                                @Override
-                                public void onPageScrollStateChanged(int state) {
-                                    // Allows video player to play at its specific position
-                                    state = mPager.getCurrentItem();
-
-                                    if (mediaList.get(state).MediaType.equals(Media.MEDIA_TYPE_VIDEO)) {
-                                        View view = mPager.findViewWithTag(state);
-                                        PlayerView playerView = view.findViewById(R.id.pvVideo);
-                                        Player player = playerView.getPlayer();
-
-                                        if (player != null) {
-                                            playerView.setPlayer(player);
-                                            player.setPlayWhenReady(true);
-                                        }
-
-                                    }
-                                    Log.i("ScrollState", "OnAutoScrolled");
-                                }
-                            });
                         }
                     };
 
@@ -709,10 +645,8 @@ public class AdDisplayActivity extends AppCompatActivity {
                                 Log.d(TAG, "current page: " + mPager.getCurrentItem());
                                 Log.d(TAG, "current interval: " + mediaList.get(mPager.getCurrentItem()).Interval);
 
-                                if (!isVideoPlaying) {
-                                    handler.post(Update);
-                                    count = 0;
-                                }
+                                handler.post(Update);
+                                count = 0;
                             }
 
                         }
@@ -731,18 +665,85 @@ public class AdDisplayActivity extends AppCompatActivity {
 
     }
 
-    public void getDeviceTime() {
-        /*String startingTime = timeSlotList.get(0);
-        int duration = startingTime.charAt(timeSlotList.size() - 1) - startingTime.charAt(0);
-        Log.i(TAG, "Duration: " + duration);
+    /**
+     * Handles the viewpager position of image and video
+     *
+     * Obtains the extension of the media source as they get swiped manually or automatically,
+     * it then helps the video player to play or pause acc. to its own position.
+     * This part is done to reduce the bug related with video player, that used to get play before its position.
+     * */
 
-        int time = Integer.parseInt(startingTime.substring(1, 5));
-        Log.i(TAG, "Time duration: " + time);*/
+    private void viewPagerChangeListener() {
+        mPager.addOnPageChangeListener(new ViewPager.OnPageChangeListener() {
+            @Override
+            public void onPageScrolled(int position, float positionOffset, int positionOffsetPixels) {
+                Log.i("ScrollState", "OnScrolled");
+
+                position = mPager.getCurrentItem();
+
+                if (mediaList.get(position).MediaType.equals(Media.MEDIA_TYPE_VIDEO)) {
+                    View view = mPager.findViewWithTag(position);
+                    PlayerView playerView = view.findViewById(R.id.pvVideo);
+                    Player player = playerView.getPlayer();
+
+                    if (player != null) {
+                        player.addListener(new Player.DefaultEventListener() {
+                            @Override
+                            public void onPlayerStateChanged(boolean playWhenReady, int playbackState) {
+                                if (playWhenReady && playbackState == Player.STATE_READY) {
+                                    // media actually playing
+                                    Log.i(TAG, "Video is playing");
+                                } else if (playWhenReady) {
+//                                                        videoPause();
+                                    Log.i(TAG, "Video is buffering");
+                                    // might be idle (plays after prepare()),
+                                    // buffering (plays when data available)
+                                    // or ended (plays when seek away from end)
+                                } else {
+                                    Log.i(TAG, "Video is paused");
+                                    // player paused in any state
+                                }
+                            }
+                        });
+                    }
+
+                }
+            }
+
+            @Override
+            public void onPageSelected(int position) {
+                Log.i("ScrollState", "OnPageSelected");
+            }
+
+            @Override
+            public void onPageScrollStateChanged(int state) {
+                // Allows video player to play at its specific position
+                state = mPager.getCurrentItem();
+
+                if (mediaList.get(state).MediaType.equals(Media.MEDIA_TYPE_VIDEO)) {
+                    View view = mPager.findViewWithTag(state);
+                    PlayerView playerView = view.findViewById(R.id.pvVideo);
+                    Player player = playerView.getPlayer();
+
+                    if (player != null) {
+                        playerView.setPlayer(player);
+                        player.setPlayWhenReady(true);
+                    }
+
+                }
+                Log.i("ScrollState", "OnAutoScrolled");
+            }
+        });
+    }
+
+
+    /**
+     * It helps to obtain the device time and send value to populateMedia();
+     * */
+    public void getDeviceTime() {
         deviceTimer.schedule(new TimerTask() {
             @Override
             public void run() {
-
-                int level;
 
                 Calendar calendar = Calendar.getInstance(Locale.getDefault());
                 String hour = String.valueOf(calendar.get(Calendar.HOUR_OF_DAY));
@@ -757,7 +758,15 @@ public class AdDisplayActivity extends AppCompatActivity {
                 String deviceTime = hour + ":" + minute;
                 deviceTime = deviceTime.substring(0, 2);
 
+
                 populateMedia(timeSlotArrayList[Integer.parseInt(deviceTime)]);
+
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        mediaContentAdapter.notifyDataSetChanged();
+                    }
+                });
                 /*if (timerCount < timeSlotList.size()) {
 
                     level = timeSlotList.get(timerCount).level;
@@ -789,9 +798,13 @@ public class AdDisplayActivity extends AppCompatActivity {
                 }*/
 
             }
-        }, 1000, 1000 * 60);
+        }, 1000, 1000 * 60 * 30);
 
     }
+
+    /**
+     * Checks if content is already downloaded or not
+     * */
 
     class DownloadThread extends Thread {
         String strPayload;
