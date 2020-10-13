@@ -11,6 +11,7 @@ import androidx.cardview.widget.CardView;
 import androidx.constraintlayout.widget.ConstraintLayout;
 
 import np.com.bottle.podapp.R;
+import np.com.bottle.podapp.util.Constants;
 import soup.neumorphism.NeumorphCardView;
 import soup.neumorphism.NeumorphFloatingActionButton;
 import soup.neumorphism.ShapeType;
@@ -34,6 +35,8 @@ public class EntranceVerificationActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_entrance_verificaiton);
         findViewsById();
+
+        Constants.FROM_ENTRANCE_ACTIVITY = false;
 
         //Obtaining data from AdDisplayActivity
         name = getIntent().getStringExtra(AdDisplayActivity.Name);
@@ -224,6 +227,7 @@ public class EntranceVerificationActivity extends AppCompatActivity {
 
             if (isExpired || isInvalid) {
                 onBackPressed();
+                Constants.FROM_ENTRANCE_ACTIVITY = true;
             } else {
                 incrementBtn.setVisibility(View.VISIBLE);
                 decreaseBtn.setVisibility(View.VISIBLE);
@@ -238,4 +242,9 @@ public class EntranceVerificationActivity extends AppCompatActivity {
         }
     };
 
+    @Override
+    public void onBackPressed() {
+        super.onBackPressed();
+        Constants.FROM_ENTRANCE_ACTIVITY = true;
+    }
 }

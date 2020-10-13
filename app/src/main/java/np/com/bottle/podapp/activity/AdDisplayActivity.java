@@ -61,12 +61,10 @@ import np.com.bottle.podapp.adapter.MediaContentAdapter;
 import np.com.bottle.podapp.fragment.EnterPinFragment;
 import np.com.bottle.podapp.fragment.NfcDetectFragment;
 import np.com.bottle.podapp.models.Media;
-import np.com.bottle.podapp.models.TimeSlot;
 import np.com.bottle.podapp.nfc.KeyInfoProvider;
 import np.com.bottle.podapp.nfc.NfcAppKeys;
 import np.com.bottle.podapp.nfc.NfcFileType;
 import np.com.bottle.podapp.services.ContentDownloadIntentService;
-import np.com.bottle.podapp.services.DeviceHealthService;
 import np.com.bottle.podapp.util.Constants;
 import np.com.bottle.podapp.util.Helper;
 
@@ -83,7 +81,7 @@ public class AdDisplayActivity extends AppCompatActivity {
     //AdView
     private boolean isVideoPlaying = false;
     private String dayOfTheWeek;
-    private final static int INTERVAL = 1000 * 5; //5 secs
+    private final static int INTERVAL = 1000 * 10; //10 secs
     private final static int INTERVAL2 = 1000 * 60; //1 min
 
     // NFC
@@ -105,9 +103,7 @@ public class AdDisplayActivity extends AppCompatActivity {
 
     //TimeSlot
     int[] timeSlotArrayList = new int[24];
-    private List<TimeSlot> timeSlotList;
     ArrayList<String> daysList = new ArrayList<>();
-    int timerCount = 0;
 
     private MediaContentAdapter mediaContentAdapter;
     private Timer mediaChangeTimer = new Timer();
@@ -139,8 +135,6 @@ public class AdDisplayActivity extends AppCompatActivity {
         mqttManager = appClass.getMqttManager();
 
         mediaList = new ArrayList<>();
-        timeSlotList = new ArrayList<>();
-
         mPager = findViewById(R.id.vpAdContent);
 
         //Disables scrolling behaviour
@@ -159,12 +153,12 @@ public class AdDisplayActivity extends AppCompatActivity {
 
         lotteLayout.setVisibility(View.GONE);
         mPager.setVisibility(View.VISIBLE);
-//        handleAdViews();
+//        displayLotteAnim();
 
         viewPagerChangeListener();
     }
 
-    private void handleAdViews() {
+    private void displayLotteAnim() {
         // Helps to display Lotte animation at first for 10sec
 
             /*Thread thread = new Thread() {
@@ -193,10 +187,8 @@ public class AdDisplayActivity extends AppCompatActivity {
         final Handler handler = new Handler();
         handler.postDelayed(new Runnable() {
             public void run() {
-
 //                mPager.setVisibility(View.GONE);
 //                lotteLayout.setVisibility(View.VISIBLE);
-
                 Log.i("Show Timer", "Timer starts");
                 handler.postDelayed(this, INTERVAL2);
 
@@ -204,6 +196,10 @@ public class AdDisplayActivity extends AppCompatActivity {
                     @Override
                     public void run() {
                         try {
+
+                            Log.i(TAG, "From Try catch");
+
+                            //TODO: Trying calling videoPause method here
                             mediaLoop(Constants.MEDIALOOPSTATUS.STOP);
                             Thread.sleep(INTERVAL);
                         } catch (InterruptedException e) {
@@ -213,12 +209,14 @@ public class AdDisplayActivity extends AppCompatActivity {
                         runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
-                                Log.i("Show Timer", "Thread starts");
-                                /*mPager.setVisibility(View.VISIBLE);
+                                Log.i(TAG, "From Thread starts");
+                                mPager.setVisibility(View.VISIBLE);
                                 lotteLayout.setVisibility(View.GONE);
-                                mediaLoop(Constants.MEDIALOOPSTATUS.START);*/
-                                startService(new Intent(getApplicationContext(), DeviceHealthService.class));
+                                mediaLoop(Constants.MEDIALOOPSTATUS.START);
 //                                mPager.setCurrentItem(currentPage, true);
+
+                                //TODO: Uncomment below code if DeviceHealthService class has to perform its operation
+//                                startService(new Intent(getApplicationContext(), DeviceHealthService.class));
                             }
                         });
                     }
@@ -226,11 +224,15 @@ public class AdDisplayActivity extends AppCompatActivity {
                 thread.start();
             }
         }, INTERVAL2);
+
     }
 
     @Override
     protected void onResume() {
         super.onResume();
+        if (Constants.FROM_ENTRANCE_ACTIVITY) {
+            videoPause(true, false);
+        }
         libInstance.startForeGroundDispatch();
         registerReceiver(receiver, new IntentFilter(ContentDownloadIntentService.NOTIFICATION));
         mediaLoop(Constants.MEDIALOOPSTATUS.START);
@@ -242,7 +244,7 @@ public class AdDisplayActivity extends AppCompatActivity {
         unregisterReceiver(receiver);
         mediaLoop(Constants.MEDIALOOPSTATUS.STOP);
         healthTimer.cancel();
-        videoPause();
+        videoPause(true, true);
         Log.i(TAG, "Activity Paused");
     }
 
@@ -251,7 +253,7 @@ public class AdDisplayActivity extends AppCompatActivity {
         super.onDestroy();
         unregisterReceiver(receiver);
         mediaLoop(Constants.MEDIALOOPSTATUS.STOP);
-        videoPause();
+        videoPause(false, false);
         Log.i(TAG, "Activity Destroyed");
     }
 
@@ -303,6 +305,8 @@ public class AdDisplayActivity extends AppCompatActivity {
             ));
 
         } else {
+            //TODO: Check pausing video works or not
+            videoPause(true, true);
             Intent intent1 = new Intent(this, EntranceVerificationActivity.class);
             intent1.putExtra(IsInvalid, true);
             startActivity(intent1);
@@ -369,6 +373,8 @@ public class AdDisplayActivity extends AppCompatActivity {
 //            showPaymentDialog(strName, strCardNumber);
 
             if (Constants.IS_ENTRANCE_VERIFICATION) {
+                //TODO: Check pausing video works or not
+                videoPause(true, true);
                 Intent intent = new Intent(this, EntranceVerificationActivity.class);
                 intent.putExtra(Name, userName);
                 intent.putExtra(UserCardNumber, String.valueOf(cardNumber));
@@ -382,6 +388,8 @@ public class AdDisplayActivity extends AppCompatActivity {
                 startActivity(intent);
 
             } else {
+                //TODO: Check pausing video works or not
+                videoPause(true, true);
                 showPinCodeDialog(1);
             }
 
@@ -431,16 +439,6 @@ public class AdDisplayActivity extends AppCompatActivity {
         Helper.fileCount(getFilesDir().getAbsolutePath() + "/content");
 
         addTimeSlots();
-
-        //TODO: Remove the below line:
-       /* timeSlotList.add(new TimeSlot("13:05 - 13", 1));
-        timeSlotList.add(new TimeSlot("13:08 - 14", 0));
-        timeSlotList.add(new TimeSlot("13:10 - 15", 1));
-        timeSlotList.add(new TimeSlot("13:12 - 16", 0));*/
-//        timeSlotList.add(new TimeSlot("18-19", 1));
-
-//        populateMedia();
-
         getDeviceTime();
         Log.d(TAG, "----- content data: " + contentPref.getString(ContentPreferences.CONTENT_DATA));
         Log.d(TAG, "----- content count: " + mediaList.size());
@@ -464,8 +462,7 @@ public class AdDisplayActivity extends AppCompatActivity {
                 JSONArray jTimeSlot = jaData.getJSONObject(i).getJSONArray("time_slot");
 
                 for (int k = 0; k < jTimeSlot.length(); k++) {
-//                    timeSlotList.add(new TimeSlot(jTimeSlot.getString(k), jaData.getJSONObject(i).getInt("level")));
-//                    Log.i(TAG, "Time Slot: " + timeSlotList.get(k).timeSlot);
+
                     int level = jaData.getJSONObject(i).getInt("level");
                     String time = jTimeSlot.getString(k).substring(0, 2);
 
@@ -480,7 +477,6 @@ public class AdDisplayActivity extends AppCompatActivity {
                     }
 
                     timeSlotArrayList[Integer.parseInt(time)] = level;
-                    Log.i(TAG, "New time: " + time);
                 }
 
             }
@@ -511,12 +507,15 @@ public class AdDisplayActivity extends AppCompatActivity {
                 } else {
                     jaContents = jaData.getJSONObject(level).getJSONArray("contents");
                 }
-//                JSONArray jaContents = jaData.getJSONObject(level).getJSONArray("contents");
+
+                Log.i(TAG, "Day directory: " + dayOfTheWeek);
 
                 for (int j = 0; j < jaContents.length(); j++) {
                     //TODO: Changed here
                     JSONObject jContent = jaContents.getJSONObject(j);
                     Log.d(TAG, "Level: " + level + " ---- " + "Name: " + jContent.getString("name"));
+
+                    Log.i(TAG, "Level data: " + jaData.getJSONObject(level).getInt("level") + "");
 
                     mediaList.add(new Media(
                             Uri.parse(getFilesDir().getAbsolutePath() + "/content/" + dayOfTheWeek + "/" + jContent.getString("name") + "." + jContent.getString("extension")),
@@ -538,10 +537,9 @@ public class AdDisplayActivity extends AppCompatActivity {
         }
     }
 
-
     /**
-    * Adding days list to create directory acc. to same day
-    * */
+     * Adding days list to create directory acc. to same day
+     */
     private void checkDirectory() {
 
         daysList.add("Sunday");
@@ -581,25 +579,37 @@ public class AdDisplayActivity extends AppCompatActivity {
     /**
      * Helps to pause video from activity rather than adapter class,
      * it is done so to communicate the view pager with media or video
-     *
+     * <p>
      * Poor communication in adapter about video leads to perform such operations here
-     * */
-    public void videoPause() {
+     *
+     * @param muteAudio as true value works only muting audio and running the video in background
+     */
+    public void videoPause(boolean playBackground, boolean muteAudio) {
         View myView = mPager.findViewWithTag(mPager.getCurrentItem());
         PlayerView playerView = myView.findViewById(R.id.pvVideo);
         Player player = playerView.getPlayer();
+
         if (player != null) {
-            playerView.onPause();
-            player.stop();
-            player.seekTo(0);
-            player.setPlayWhenReady(false);
+            if (!playBackground) {
+                playerView.onPause();
+                player.stop();
+                player.seekTo(0);
+                player.setPlayWhenReady(false);
+            } else {
+                if (muteAudio) {
+                    Objects.requireNonNull(player.getAudioComponent()).setVolume(0f);
+                } else {
+                    Objects.requireNonNull(player.getAudioComponent()).setVolume(1f);
+                }
+            }
+
         }
     }
 
     /**
-    * @param isToday sets the String dayOfTheWeek as today's or yesterday's day
+     * @param isToday sets the String dayOfTheWeek as today's or yesterday's day
      *                if true sets Today's day or Yesterday's day
-    * */
+     */
     private void setToday(boolean isToday) {
         @SuppressLint("SimpleDateFormat") SimpleDateFormat sdf = new SimpleDateFormat("EEEE");
         if (isToday) {
@@ -667,11 +677,11 @@ public class AdDisplayActivity extends AppCompatActivity {
 
     /**
      * Handles the viewpager position of image and video
-     *
+     * <p>
      * Obtains the extension of the media source as they get swiped manually or automatically,
      * it then helps the video player to play or pause acc. to its own position.
      * This part is done to reduce the bug related with video player, that used to get play before its position.
-     * */
+     */
 
     private void viewPagerChangeListener() {
         mPager.addOnPageChangeListener(new ViewPager.OnPageChangeListener() {
@@ -739,7 +749,7 @@ public class AdDisplayActivity extends AppCompatActivity {
 
     /**
      * It helps to obtain the device time and send value to populateMedia();
-     * */
+     */
     public void getDeviceTime() {
         deviceTimer.schedule(new TimerTask() {
             @Override
@@ -804,7 +814,7 @@ public class AdDisplayActivity extends AppCompatActivity {
 
     /**
      * Checks if content is already downloaded or not
-     * */
+     */
 
     class DownloadThread extends Thread {
         String strPayload;
@@ -962,6 +972,8 @@ public class AdDisplayActivity extends AppCompatActivity {
             case MotionEvent.ACTION_UP:
                 if (((Long) System.currentTimeMillis() - longPressTime) > 3000) {
                     Log.d(TAG, "------------------------------ ACTION_UP");
+                    //TODO: Check pausing video works or not
+                    videoPause(true, true);
                     showPinCodeDialog(0);
 //                    startActivity(new Intent(getApplicationContext(), SettingsActivity.class));
                     return true;
@@ -989,6 +1001,7 @@ public class AdDisplayActivity extends AppCompatActivity {
 //        args.putString("name", name);
 //        args.putInt("cardNumber", cardNumber);
 
+        Constants.FROM_ENTRANCE_ACTIVITY = false;
         EnterPinFragment dialogFragment = new EnterPinFragment(value);
         dialogFragment.setArguments(args);
         dialogFragment.show(ft, "dialog");

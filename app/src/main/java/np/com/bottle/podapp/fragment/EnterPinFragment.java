@@ -30,6 +30,7 @@ import java.util.Objects;
 
 import np.com.bottle.podapp.R;
 import np.com.bottle.podapp.activity.SettingsActivity;
+import np.com.bottle.podapp.util.Constants;
 import soup.neumorphism.NeumorphCardView;
 
 public class EnterPinFragment extends DialogFragment implements DigitAdapter.buttonClickListener {
@@ -143,6 +144,7 @@ public class EnterPinFragment extends DialogFragment implements DigitAdapter.but
                 constraintLayout_secondary.setVisibility(View.GONE);
             }
 
+            //Running handler for progress view
             final Handler handler = new Handler();
             handler.postDelayed(new Runnable() {
                 @Override
@@ -157,6 +159,7 @@ public class EnterPinFragment extends DialogFragment implements DigitAdapter.but
         } else {
             if (pin.equals("123456")) { // For Ad Activity
                 dismiss();
+                Constants.FROM_ENTRANCE_ACTIVITY = true;
                 startActivity(new Intent(getActivity(), SettingsActivity.class));
             }
         }
@@ -196,6 +199,7 @@ public class EnterPinFragment extends DialogFragment implements DigitAdapter.but
         @SuppressLint("SetTextI18n")
         @Override
         public void onClick(View view) {
+            Constants.FROM_ENTRANCE_ACTIVITY = true;
             dismiss();
         }
     };

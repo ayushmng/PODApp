@@ -37,6 +37,9 @@ public class Constants {
     // Identifies Card Recognition for Entrance or Payment
     public static boolean IS_ENTRANCE_VERIFICATION = true;
 
+    // Handles all the video audio to run or not in background
+    public static boolean FROM_ENTRANCE_ACTIVITY = false;
+
     public static void constructTopic(String orgId, String deviceId) {
         TOPIC_ACTIVATE_PUB = STAGE + "/data/activation/type/pub/device/" + deviceId;
         TOPIC_TELEMETRY_PUB = STAGE + "/data/telemetry/type/pub/device/" + deviceId;
