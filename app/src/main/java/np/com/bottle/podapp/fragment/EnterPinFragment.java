@@ -211,6 +211,8 @@ public class EnterPinFragment extends DialogFragment implements DigitAdapter.but
         textField.setText(pin + (position + 1));
     }
 
+
+
 }
 
 

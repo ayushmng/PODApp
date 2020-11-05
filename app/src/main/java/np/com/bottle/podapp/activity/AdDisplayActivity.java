@@ -151,56 +151,54 @@ public class AdDisplayActivity extends AppCompatActivity {
         initializeKeys();
         initializeMedia();
 
-        lotteLayout.setVisibility(View.GONE);
-        mPager.setVisibility(View.VISIBLE);
-//        displayLotteAnim();
+        lotteLayout.setVisibility(View.VISIBLE);
+        mPager.setVisibility(View.GONE);
+        displayLotteAnim();
 
         viewPagerChangeListener();
     }
 
     private void displayLotteAnim() {
         // Helps to display Lotte animation at first for 10sec
-
-            /*Thread thread = new Thread() {
-                @Override
-                public void run() {
-                    try {
-                        mediaLoop(Constants.MEDIALOOPSTATUS.STOP);
-                        Thread.sleep(INTERVAL);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            mPager.setVisibility(View.VISIBLE);
-                            lotteLayout.setVisibility(View.GONE);
-                            mediaLoop(Constants.MEDIALOOPSTATUS.START);
-                        }
-                    });
+        Thread thread = new Thread() {
+            @Override
+            public void run() {
+                try {
+                    mediaLoop(Constants.MEDIALOOPSTATUS.STOP);
+                    Thread.sleep(INTERVAL);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
                 }
-            };
-            thread.start();*/
+
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        mPager.setVisibility(View.VISIBLE);
+                        lotteLayout.setVisibility(View.GONE);
+//                        mediaLoop(Constants.MEDIALOOPSTATUS.START);
+                    }
+                });
+            }
+        };
+        thread.start();
 
         // Displays ad view for 1min and animation for 10sec
         final Handler handler = new Handler();
         handler.postDelayed(new Runnable() {
             public void run() {
-//                mPager.setVisibility(View.GONE);
-//                lotteLayout.setVisibility(View.VISIBLE);
-                Log.i("Show Timer", "Timer starts");
+
+                mPager.setVisibility(View.GONE);
+                lotteLayout.setVisibility(View.VISIBLE);
+                videoPause(true, true);
+
                 handler.postDelayed(this, INTERVAL2);
 
                 Thread thread = new Thread() {
                     @Override
                     public void run() {
                         try {
-
-                            Log.i(TAG, "From Try catch");
-
                             //TODO: Trying calling videoPause method here
-                            mediaLoop(Constants.MEDIALOOPSTATUS.STOP);
+//                            mediaLoop(Constants.MEDIALOOPSTATUS.STOP);
                             Thread.sleep(INTERVAL);
                         } catch (InterruptedException e) {
                             e.printStackTrace();
@@ -209,10 +207,11 @@ public class AdDisplayActivity extends AppCompatActivity {
                         runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
-                                Log.i(TAG, "From Thread starts");
+
                                 mPager.setVisibility(View.VISIBLE);
                                 lotteLayout.setVisibility(View.GONE);
-                                mediaLoop(Constants.MEDIALOOPSTATUS.START);
+                                videoPause(true, false);
+//                                mediaLoop(Constants.MEDIALOOPSTATUS.START);
 //                                mPager.setCurrentItem(currentPage, true);
 
                                 //TODO: Uncomment below code if DeviceHealthService class has to perform its operation
