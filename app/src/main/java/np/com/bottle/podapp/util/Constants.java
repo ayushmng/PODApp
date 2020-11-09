@@ -1,7 +1,5 @@
 package np.com.bottle.podapp.util;
 
-import java.util.ArrayList;
-
 public class Constants {
     public static final String SUCCESS = "success";
     public static final String KEYSTORE_NAME = "bottle_pod_keystore";

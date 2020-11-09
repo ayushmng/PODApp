@@ -43,6 +43,9 @@
     <string name="scan_your_card_here">Scan Your Card Here</string>
     <string name="entrance_verification">Entrance Verification</string>
 
+    //Error Messages
+    <string name="password_mismatch">Password not matched</string>
+
     //Card Types
     <string name="gold">Gold</string>
     <string name="platinum">Platinum</string>

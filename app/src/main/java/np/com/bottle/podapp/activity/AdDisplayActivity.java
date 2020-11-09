@@ -128,6 +128,8 @@ public class AdDisplayActivity extends AppCompatActivity {
         context = this;
 //        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
+        Log.i(TAG, "Is it here?");
+
         lotteLayout = findViewById(R.id.constraint_lotte);
         appPref = new AppPreferences(getApplicationContext());
         contentPref = new ContentPreferences(getApplicationContext());
@@ -164,7 +166,6 @@ public class AdDisplayActivity extends AppCompatActivity {
             @Override
             public void run() {
                 try {
-                    mediaLoop(Constants.MEDIALOOPSTATUS.STOP);
                     Thread.sleep(INTERVAL);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
@@ -175,7 +176,6 @@ public class AdDisplayActivity extends AppCompatActivity {
                     public void run() {
                         mPager.setVisibility(View.VISIBLE);
                         lotteLayout.setVisibility(View.GONE);
-//                        mediaLoop(Constants.MEDIALOOPSTATUS.START);
                     }
                 });
             }
@@ -197,8 +197,6 @@ public class AdDisplayActivity extends AppCompatActivity {
                     @Override
                     public void run() {
                         try {
-                            //TODO: Trying calling videoPause method here
-//                            mediaLoop(Constants.MEDIALOOPSTATUS.STOP);
                             Thread.sleep(INTERVAL);
                         } catch (InterruptedException e) {
                             e.printStackTrace();
@@ -211,9 +209,6 @@ public class AdDisplayActivity extends AppCompatActivity {
                                 mPager.setVisibility(View.VISIBLE);
                                 lotteLayout.setVisibility(View.GONE);
                                 videoPause(true, false);
-//                                mediaLoop(Constants.MEDIALOOPSTATUS.START);
-//                                mPager.setCurrentItem(currentPage, true);
-
                                 //TODO: Uncomment below code if DeviceHealthService class has to perform its operation
 //                                startService(new Intent(getApplicationContext(), DeviceHealthService.class));
                             }
@@ -252,7 +247,7 @@ public class AdDisplayActivity extends AppCompatActivity {
         super.onDestroy();
         unregisterReceiver(receiver);
         mediaLoop(Constants.MEDIALOOPSTATUS.STOP);
-        videoPause(false, false);
+//        videoPause(false, false);
         Log.i(TAG, "Activity Destroyed");
     }
 
@@ -585,24 +580,29 @@ public class AdDisplayActivity extends AppCompatActivity {
      */
     public void videoPause(boolean playBackground, boolean muteAudio) {
         View myView = mPager.findViewWithTag(mPager.getCurrentItem());
-        PlayerView playerView = myView.findViewById(R.id.pvVideo);
-        Player player = playerView.getPlayer();
 
-        if (player != null) {
-            if (!playBackground) {
-                playerView.onPause();
-                player.stop();
-                player.seekTo(0);
-                player.setPlayWhenReady(false);
-            } else {
-                if (muteAudio) {
-                    Objects.requireNonNull(player.getAudioComponent()).setVolume(0f);
+        try {
+            PlayerView playerView = myView.findViewById(R.id.pvVideo);
+            Player player = playerView.getPlayer();
+
+            if (player != null) {
+                if (!playBackground) {
+                    playerView.onPause();
+                    player.stop();
+                    player.seekTo(0);
+                    player.setPlayWhenReady(false);
                 } else {
-                    Objects.requireNonNull(player.getAudioComponent()).setVolume(1f);
+                    if (muteAudio) {
+                        Objects.requireNonNull(player.getAudioComponent()).setVolume(0f);
+                    } else {
+                        Objects.requireNonNull(player.getAudioComponent()).setVolume(1f);
+                    }
                 }
             }
-
+        } catch (NullPointerException e) {
+            e.printStackTrace();
         }
+
     }
 
     /**
@@ -1004,6 +1004,8 @@ public class AdDisplayActivity extends AppCompatActivity {
         EnterPinFragment dialogFragment = new EnterPinFragment(value);
         dialogFragment.setArguments(args);
         dialogFragment.show(ft, "dialog");
+
+        Log.i(TAG, "Is it here?");
     }
 
     public static String Name = "NAME";

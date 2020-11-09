@@ -14,6 +14,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -29,6 +30,7 @@ import java.util.List;
 import java.util.Objects;
 
 import np.com.bottle.podapp.R;
+import np.com.bottle.podapp.activity.AdDisplayActivity;
 import np.com.bottle.podapp.activity.SettingsActivity;
 import np.com.bottle.podapp.util.Constants;
 import soup.neumorphism.NeumorphCardView;
@@ -140,8 +142,10 @@ public class EnterPinFragment extends DialogFragment implements DigitAdapter.but
                 constraintLayout_secondary.setVisibility(View.VISIBLE);
                 mDilatingDotsProgressBar.showNow();
             } else {
+                Toast.makeText(getContext(), getString(R.string.password_mismatch), Toast.LENGTH_SHORT).show();
                 constraintLayout_primary.setVisibility(View.VISIBLE);
                 constraintLayout_secondary.setVisibility(View.GONE);
+                return;
             }
 
             //Running handler for progress view
@@ -152,6 +156,7 @@ public class EnterPinFragment extends DialogFragment implements DigitAdapter.but
                     mDilatingDotsProgressBar.hideNow();
                     constraintLayout_primary.setVisibility(View.VISIBLE);
                     constraintLayout_secondary.setVisibility(View.GONE);
+                    dismiss();
                     Log.d("Handler", "Running Handler");
                 }
             }, 5000);
@@ -161,6 +166,8 @@ public class EnterPinFragment extends DialogFragment implements DigitAdapter.but
                 dismiss();
                 Constants.FROM_ENTRANCE_ACTIVITY = true;
                 startActivity(new Intent(getActivity(), SettingsActivity.class));
+            } else {
+                Toast.makeText(getContext(), getString(R.string.password_mismatch), Toast.LENGTH_SHORT).show();
             }
         }
 
@@ -210,8 +217,6 @@ public class EnterPinFragment extends DialogFragment implements DigitAdapter.but
         pin = textField.getText().toString();
         textField.setText(pin + (position + 1));
     }
-
-
 
 }
 

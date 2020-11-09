@@ -244,7 +244,7 @@ public class SettingsActivity extends AppCompatActivity implements OnItemClickLi
 
     /**
      * Opens the password entering dialog box
-     * */
+     */
     @Override
     public void onItemClicked(ScanResult scanResult) {
         selectedScanResult = scanResult;
@@ -318,7 +318,7 @@ public class SettingsActivity extends AppCompatActivity implements OnItemClickLi
 
     /**
      * ViewPager used for displaying device details
-     * */
+     */
     private void setupViewPager() {
 
         fragmentAdapter = new ViewPagerFragmentAdapter(this, deviceDetailList);

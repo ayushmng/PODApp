@@ -1,8 +1,11 @@
 package np.com.bottle.podapp.fragment;
 
+import android.Manifest;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
+import android.content.pm.PackageManager;
 import android.net.ConnectivityManager;
 import android.net.Network;
 import android.net.NetworkCapabilities;
@@ -12,6 +15,7 @@ import android.net.wifi.SupplicantState;
 import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiManager;
 import android.net.wifi.WifiNetworkSpecifier;
+import android.net.wifi.WifiNetworkSuggestion;
 import android.os.Build;
 import android.os.Bundle;
 import android.text.Editable;
@@ -22,12 +26,18 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
+import androidx.core.app.ActivityCompat;
 import androidx.fragment.app.DialogFragment;
 import androidx.fragment.app.Fragment;
 
+import org.jetbrains.annotations.NotNull;
+
+import java.util.ArrayList;
 import java.util.List;
 
 import np.com.bottle.podapp.R;
@@ -46,6 +56,7 @@ public class WifiConfigFragment extends DialogFragment {
     private ScanResult scanResult;
     private List<ScanResult> scanResultList;
     private String SSID;
+    private ProgressBar progressBar;
 
     TextView tvSsid;
     EditText etPassword;
@@ -80,10 +91,15 @@ public class WifiConfigFragment extends DialogFragment {
         tvSsid = view.findViewById(R.id.tvSsid);
         etPassword = view.findViewById(R.id.etPassword);
         btnConnection = view.findViewById(R.id.btnConnect);
+        progressBar = view.findViewById(R.id.progressBar);
+        progressBarVisibility(false);
 
         tvSsid.setText(scanResult.SSID);
 
         buttonClickable(false);
+        /**
+         * Disables clicking submit button if the password text length is less than 8
+         * */
         etPassword.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
@@ -125,7 +141,8 @@ public class WifiConfigFragment extends DialogFragment {
         public void onClick(View view) {
             String password = etPassword.getText().toString();
 //            connectWifi(password);
-            connectToAP(scanResult.SSID, password);
+//            connectToAP(scanResult.SSID, password);
+            connectWifi(password);
         }
     };
 
@@ -145,6 +162,16 @@ public class WifiConfigFragment extends DialogFragment {
                 assert wifiManager != null;
                 wifiManager.addNetwork(wifiConf);
 
+                if (ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                    // TODO: Consider calling
+                    //    ActivityCompat#requestPermissions
+                    // here to request the missing permissions, and then overriding
+                    //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+                    //                                          int[] grantResults)
+                    // to handle the case where the user grants the permission. See the documentation
+                    // for ActivityCompat#requestPermissions for more details.
+                    return;
+                }
                 List<WifiConfiguration> wifiConfigList = wifiManager.getConfiguredNetworks();
                 for (WifiConfiguration result : wifiConfigList) {
                     if (result.SSID != null && result.SSID.equals("\"" + scanResult.SSID + "\"")) {
@@ -167,21 +194,22 @@ public class WifiConfigFragment extends DialogFragment {
                 networkRequestBuilder.setNetworkSpecifier(wifiNetworkSpecifier);
 
                 NetworkRequest networkRequest = networkRequestBuilder.build();
-
                 final ConnectivityManager connectivityManager = (ConnectivityManager) context.getApplicationContext().getSystemService(Context.CONNECTIVITY_SERVICE);
                 final ConnectivityManager.NetworkCallback networkCallback = new ConnectivityManager.NetworkCallback() {
                     @Override
-                    public void onAvailable(Network network) {
+                    public void onAvailable(@NotNull Network network) {
                         super.onAvailable(network);
                         Log.d(TAG, "onAvailable:" + network);
                         assert connectivityManager != null;
                         connectivityManager.bindProcessToNetwork(network);
+                        connectivityManager.getBoundNetworkForProcess();
+                        connectivityManager.getActiveNetwork();
                         dismiss();
-
                     }
                 };
                 assert connectivityManager != null;
                 connectivityManager.requestNetwork(networkRequest, networkCallback);
+                connectivityManager.registerDefaultNetworkCallback(networkCallback); //Added later
             }
         }
     }
@@ -283,6 +311,14 @@ public class WifiConfigFragment extends DialogFragment {
         }
 
         return "OPEN";
+    }
+
+    private void progressBarVisibility(Boolean value) {
+        if (value) {
+            progressBar.setVisibility(View.VISIBLE);
+        } else {
+            progressBar.setVisibility(View.GONE);
+        }
     }
 }
 
