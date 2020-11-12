@@ -769,27 +769,23 @@ public class AdDisplayActivity extends AppCompatActivity {
                 String hour = String.valueOf(calendar.get(Calendar.HOUR_OF_DAY));
                 String minute = String.valueOf(calendar.get(Calendar.MINUTE));
 
-                if (hour.length() == 1) {
-                    hour = "0" + hour;
-                }
-
                 if (minute.length() == 1) {
                     minute = "0" + minute;
                 }
 
                 // For debugging purpose
-                int ihour = calendar.get(Calendar.MINUTE);
-                if (ihour > 23) {
-                    ihour = ihour / 3;
-                }
-
-                Log.d(TAG, "MediaLoop > getDeviceTime - ihour: " + ihour);
+//                int ihour = calendar.get(Calendar.MINUTE);
+//                if (ihour > 23) {
+//                    ihour = ihour / 3;
+//                }
+//
+//                Log.d(TAG, "MediaLoop > getDeviceTime - ihour: " + ihour);
                 Log.d(TAG, "MediaLoop > getDeviceTime - hour: " + hour);
-                Log.d(TAG, "MediaLoop > getDeviceTime - timeslotarraylist value: " + timeSlotArrayList[ihour]);
+                Log.d(TAG, "MediaLoop > getDeviceTime - timeslotarraylist value: " + timeSlotArrayList[Integer.parseInt(hour)]);
                 Log.d(TAG, "MediaLoop > getDeviceTime - timeslotarraylist: " + Arrays.toString(timeSlotArrayList));
 
 
-                populateMedia(timeSlotArrayList[ihour]);
+                populateMedia(timeSlotArrayList[Integer.parseInt(hour)]);
 
                 runOnUiThread(new Runnable() {
                     @Override
