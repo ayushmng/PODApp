@@ -401,6 +401,8 @@ public class DeviceHealthService extends IntentService implements SensorEventLis
             in.close();
         } catch (IOException ex) {
             ex.printStackTrace();
+        } catch (NullPointerException e) {
+            Log.e(TAG, "ReadCPU0 NullPointerException: " + e.getMessage());
         }
         return result;
     }

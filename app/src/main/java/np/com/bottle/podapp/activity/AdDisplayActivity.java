@@ -45,6 +45,7 @@ import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
@@ -153,9 +154,12 @@ public class AdDisplayActivity extends AppCompatActivity {
         initializeKeys();
         initializeMedia();
 
-        lotteLayout.setVisibility(View.VISIBLE);
-        mPager.setVisibility(View.GONE);
-        displayLotteAnim();
+//        lotteLayout.setVisibility(View.VISIBLE);
+//        mPager.setVisibility(View.GONE);
+//        displayLotteAnim();
+
+        lotteLayout.setVisibility(View.GONE);
+        mPager.setVisibility(View.VISIBLE);
 
         viewPagerChangeListener();
     }
@@ -229,17 +233,23 @@ public class AdDisplayActivity extends AppCompatActivity {
         }
         libInstance.startForeGroundDispatch();
         registerReceiver(receiver, new IntentFilter(ContentDownloadIntentService.NOTIFICATION));
-        mediaLoop(Constants.MEDIALOOPSTATUS.START);
     }
 
     @Override
     protected void onPause() {
         super.onPause();
-        unregisterReceiver(receiver);
-        mediaLoop(Constants.MEDIALOOPSTATUS.STOP);
+//        unregisterReceiver(receiver);
         healthTimer.cancel();
         videoPause(true, true);
+        deviceTimer.cancel();
+        mediaLoop(Constants.MEDIALOOPSTATUS.STOP);
         Log.i(TAG, "Activity Paused");
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        finish();
     }
 
     @Override
@@ -451,6 +461,8 @@ public class AdDisplayActivity extends AppCompatActivity {
             JSONArray jaData = jPayload.getJSONArray("data");
             contentDate = jPayload.getString("createdAt");
 
+            Arrays.fill(timeSlotArrayList, 1);
+
             for (int i = 0; i < jaData.length(); i++) {
 
                 JSONArray jTimeSlot = jaData.getJSONObject(i).getJSONArray("time_slot");
@@ -460,16 +472,11 @@ public class AdDisplayActivity extends AppCompatActivity {
                     int level = jaData.getJSONObject(i).getInt("level");
                     String time = jTimeSlot.getString(k).substring(0, 2);
 
-                    if (time.length() > 5) {
-                        time = time.substring(0, 5);
-                    } else {
-                        time = time.substring(0, 2);
+                    if (time.substring(1).equals("-")) {
+                        time = time.substring(0, time.length() - 1);
                     }
 
-                    if (time.substring(time.length() - 1).equals("-")) {
-                        time = "0" + time.substring(0, time.length() - 1);
-                    }
-
+                    Log.d(TAG, "MediaLoop > addTimeSlots - level: " + level);
                     timeSlotArrayList[Integer.parseInt(time)] = level;
                 }
 
@@ -509,16 +516,18 @@ public class AdDisplayActivity extends AppCompatActivity {
                     JSONObject jContent = jaContents.getJSONObject(j);
                     Log.d(TAG, "Level: " + level + " ---- " + "Name: " + jContent.getString("name"));
 
-                    Log.i(TAG, "Level data: " + jaData.getJSONObject(level).getInt("level") + "");
+                    Log.i(TAG, "Level data: " + jaData.getJSONObject(level - 1).getInt("level") + "");
 
                     mediaList.add(new Media(
                             Uri.parse(getFilesDir().getAbsolutePath() + "/content/" + dayOfTheWeek + "/" + jContent.getString("name") + "." + jContent.getString("extension")),
                             jContent.getInt("interval"),
                             jContent.getString("type"),
-                            jaData.getJSONObject(level).getInt("level")
+                            jaData.getJSONObject(level - 1).getInt("level")
                     ));
 
                 }
+
+                NUM_PAGES = mediaList.size();
 
             } catch (JSONException e) {
                 e.printStackTrace();
@@ -750,9 +759,11 @@ public class AdDisplayActivity extends AppCompatActivity {
      * It helps to obtain the device time and send value to populateMedia();
      */
     public void getDeviceTime() {
+        deviceTimer = new Timer();
         deviceTimer.schedule(new TimerTask() {
             @Override
             public void run() {
+                mediaLoop(Constants.MEDIALOOPSTATUS.STOP);
 
                 Calendar calendar = Calendar.getInstance(Locale.getDefault());
                 String hour = String.valueOf(calendar.get(Calendar.HOUR_OF_DAY));
@@ -760,15 +771,25 @@ public class AdDisplayActivity extends AppCompatActivity {
 
                 if (hour.length() == 1) {
                     hour = "0" + hour;
-                } else if (minute.length() == 1) {
+                }
+
+                if (minute.length() == 1) {
                     minute = "0" + minute;
                 }
 
-                String deviceTime = hour + ":" + minute;
-                deviceTime = deviceTime.substring(0, 2);
+                // For debugging purpose
+                int ihour = calendar.get(Calendar.MINUTE);
+                if (ihour > 23) {
+                    ihour = ihour / 3;
+                }
+
+                Log.d(TAG, "MediaLoop > getDeviceTime - ihour: " + ihour);
+                Log.d(TAG, "MediaLoop > getDeviceTime - hour: " + hour);
+                Log.d(TAG, "MediaLoop > getDeviceTime - timeslotarraylist value: " + timeSlotArrayList[ihour]);
+                Log.d(TAG, "MediaLoop > getDeviceTime - timeslotarraylist: " + Arrays.toString(timeSlotArrayList));
 
 
-                populateMedia(timeSlotArrayList[Integer.parseInt(deviceTime)]);
+                populateMedia(timeSlotArrayList[ihour]);
 
                 runOnUiThread(new Runnable() {
                     @Override
@@ -776,38 +797,10 @@ public class AdDisplayActivity extends AppCompatActivity {
                         mediaContentAdapter.notifyDataSetChanged();
                     }
                 });
-                /*if (timerCount < timeSlotList.size()) {
 
-                    level = timeSlotList.get(timerCount).level;
-//                    Log.d(TAG, "Level: " + level);
-//                    Log.d(TAG, "Timer Count: " + timerCount)
-                    String startingTime = timeSlotList.get(timerCount).timeSlot;
-                    String time = "";
-                    if (startingTime.length() > 5) {
-                        time = startingTime.substring(0, 5);
-                    } else {
-                        time = startingTime.substring(0, 2);
-                        deviceTime = deviceTime.substring(0, 2);
-                    }
-
-                    if (time.substring(time.length() - 1).equals("-")) {
-                        time = "0" + time.substring(0, time.length() - 1);
-                    }
-
-                    Log.i(TAG, "API time: " + time + " Device Time: " + deviceTime);
-
-                    if (deviceTime.equals(time)) {
-
-                        populateMedia(level);
-                        timerCount++;
-
-                    } else {
-                        populateMedia(1); //sending level 1 contents as default
-                    }
-                }*/
-
+                mediaLoop(Constants.MEDIALOOPSTATUS.START);
             }
-        }, 1000, 1000 * 60 * 30);
+        }, 1000, 1000 * 60);
 
     }
 
@@ -830,7 +823,6 @@ public class AdDisplayActivity extends AppCompatActivity {
                 String createdAt = payloadData.getString("createdAt");
 
                 if (!Helper.compareDate(contentDate)) {
-//                if (!Helper.compareDate(contentDate) || NUM_PAGES == 0) {
 
                     // Saving content to preference
                     contentPref.putString(ContentPreferences.CONTENT_DATA, strPayload);
@@ -838,7 +830,6 @@ public class AdDisplayActivity extends AppCompatActivity {
                     Intent intent = new Intent(AdDisplayActivity.this, ContentDownloadIntentService.class);
                     intent.putExtra(ContentDownloadIntentService.CONTENT_DATA, strPayload);
 
-                    mediaLoop(Constants.MEDIALOOPSTATUS.STOP);
                     startService(intent);
 
                 } else {
@@ -861,32 +852,13 @@ public class AdDisplayActivity extends AppCompatActivity {
 
     // region MQTT Publish & Subscription
 
-    // Publish message to the device_uri topic.
-    // QOS 1 is being used for mqtt.
+    /**
+     * Publish message to the device_uri topic.
+     * QOS 1 is being used for mqtt.
+     */
     private void publishMsg(String topic, String payload) {
         mqttManager.publishString(payload, topic, AWSIotMqttQos.QOS1);
         Log.d(TAG, topic + ": Message Sent");
-    }
-
-    private void subscribe(String topic) {
-        try {
-            mqttManager.subscribeToTopic(topic, AWSIotMqttQos.QOS0,
-                    new AWSIotMqttNewMessageCallback() {
-                        @Override
-                        public void onMessageArrived(String topic, byte[] data) {
-                            Log.d(TAG, "topic: " + topic);
-                            String strData = new String(data, StandardCharsets.UTF_8);
-                            Log.d(TAG, "Message: " + strData);
-//                            switch (topic) {
-//                                case TOPIC_CONTENT_RESPONSE:
-//                                    break;
-//                            }
-                        }
-                    });
-            Log.d(TAG, "Subscribed to topic: " + topic);
-        } catch (Exception e) {
-            Log.e(TAG, "Error in Subscribing to Topic.");
-        }
     }
 
     private void subscribeToContentResponse(String topic) {
@@ -924,9 +896,16 @@ public class AdDisplayActivity extends AppCompatActivity {
                 if (resultCode == ContentDownloadIntentService.RESULT_CODE_SUCCESS) {
                     Toast.makeText(AdDisplayActivity.this, "File downloaded.", Toast.LENGTH_SHORT).show();
                     setToday(true); // Setting day as same day if the file gets download
-//                    populateMedia(contentPref.getString(ContentPreferences.CONTENT_DATA));
-                    mediaContentAdapter.notifyDataSetChanged();
-                    mediaLoop(Constants.MEDIALOOPSTATUS.START);
+
+
+                    // This block is used to reset the timeslot timer and media loop.
+                    Thread getDeviceTimeThread = new Thread(new Runnable() {
+                        @Override
+                        public void run() {
+                            addTimeSlots();
+                        }
+                    });
+                    getDeviceTimeThread.start();
 
                     // Clearing other days directory media items
                     File dirToDelete;
