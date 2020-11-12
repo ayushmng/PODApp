@@ -30,8 +30,8 @@ import java.util.List;
 import java.util.Objects;
 
 import np.com.bottle.podapp.R;
-import np.com.bottle.podapp.activity.AdDisplayActivity;
 import np.com.bottle.podapp.activity.SettingsActivity;
+import np.com.bottle.podapp.interfaces.OnDialogDismissListener;
 import np.com.bottle.podapp.util.Constants;
 import soup.neumorphism.NeumorphCardView;
 
@@ -44,6 +44,8 @@ public class EnterPinFragment extends DialogFragment implements DigitAdapter.but
     NeumorphCardView clear, zero, backspace;
     TextView textField, textHead, ok, cancel;
 
+    OnDialogDismissListener listener;
+
     String pin;
     Integer value;
 
@@ -53,8 +55,9 @@ public class EnterPinFragment extends DialogFragment implements DigitAdapter.but
     private String mParam1;
     private String mParam2;
 
-    public EnterPinFragment(Integer value) {
+    public EnterPinFragment(Integer value, OnDialogDismissListener listener) {
         this.value = value;
+        this.listener = listener;
     }
 
     @Override
@@ -207,6 +210,7 @@ public class EnterPinFragment extends DialogFragment implements DigitAdapter.but
         @Override
         public void onClick(View view) {
             Constants.FROM_ENTRANCE_ACTIVITY = true;
+            listener.dialogDismissed(true);
             dismiss();
         }
     };

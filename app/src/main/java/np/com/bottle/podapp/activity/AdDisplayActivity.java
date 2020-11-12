@@ -61,6 +61,7 @@ import np.com.bottle.podapp.R;
 import np.com.bottle.podapp.adapter.MediaContentAdapter;
 import np.com.bottle.podapp.fragment.EnterPinFragment;
 import np.com.bottle.podapp.fragment.NfcDetectFragment;
+import np.com.bottle.podapp.interfaces.OnDialogDismissListener;
 import np.com.bottle.podapp.models.Media;
 import np.com.bottle.podapp.nfc.KeyInfoProvider;
 import np.com.bottle.podapp.nfc.NfcAppKeys;
@@ -69,7 +70,7 @@ import np.com.bottle.podapp.services.ContentDownloadIntentService;
 import np.com.bottle.podapp.util.Constants;
 import np.com.bottle.podapp.util.Helper;
 
-public class AdDisplayActivity extends AppCompatActivity {
+public class AdDisplayActivity extends AppCompatActivity implements OnDialogDismissListener {
 
     private static String TAG = AdDisplayActivity.class.getSimpleName();
     private ConstraintLayout lotteLayout;
@@ -800,6 +801,11 @@ public class AdDisplayActivity extends AppCompatActivity {
 
     }
 
+    @Override
+    public void dialogDismissed(Boolean dismissed) {
+        videoPause(true, false);
+    }
+
     /**
      * Checks if content is already downloaded or not
      */
@@ -976,7 +982,7 @@ public class AdDisplayActivity extends AppCompatActivity {
 //        args.putInt("cardNumber", cardNumber);
 
         Constants.FROM_ENTRANCE_ACTIVITY = false;
-        EnterPinFragment dialogFragment = new EnterPinFragment(value);
+        EnterPinFragment dialogFragment = new EnterPinFragment(value, this);
         dialogFragment.setArguments(args);
         dialogFragment.show(ft, "dialog");
 
